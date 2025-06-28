@@ -1,5 +1,20 @@
 // RoomieHub - Enhanced Roommate Portal
 
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAR1Te9hZbEbj0Ln2s1SXAD32y6FPnPs5s",
+    authDomain: "roommate-portal.firebaseapp.com",
+    projectId: "roommate-portal",
+    storageBucket: "roommate-portal.firebasestorage.app",
+    messagingSenderId: "496204874017",
+    appId: "1:496204874017:web:76e5a43d58ce30d8d87e60"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
 // Data storage
 let chores = JSON.parse(localStorage.getItem('roomieHub_chores')) || [];
 let messages = JSON.parse(localStorage.getItem('roomieHub_messages')) || [];
@@ -19,20 +34,45 @@ const activeChoresCount = document.getElementById('activeChoresCount');
 const completedTodayCount = document.getElementById('completedTodayCount');
 const newMessagesCount = document.getElementById('newMessagesCount');
 
+// Firebase Authentication
+const signInButton = document.getElementById('signInButton');
+const signOutButton = document.getElementById('signOutButton');
+let currentUser = null;
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', function () {
     initializeApp();
 });
 
 function initializeApp() {
-    loadChores();
-    loadMessages();
-    updateStatistics();
+    updateUIForAuth();
 
-    // Add sample data if none exists
-    if (chores.length === 0 && messages.length === 0) {
-        addSampleData();
+    if (!currentUser) {
+        showLoginModal();
     }
+}
+
+// Load chores from Firestore
+function loadChoresFromFirestore() {
+    db.collection('chores').onSnapshot((snapshot) => {
+        chores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        loadChores();
+        updateStatistics();
+    }, (error) => {
+        console.error('Error loading chores:', error);
+        showNotification('❌ Failed to load chores. Please try again later.');
+    });
+}
+
+// Load messages from Firestore
+function loadMessagesFromFirestore() {
+    db.collection('messages').onSnapshot((snapshot) => {
+        messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        loadMessages();
+    }, (error) => {
+        console.error('Error loading messages:', error);
+        showNotification('❌ Failed to load messages. Please try again later.');
+    });
 }
 
 // Tab switching functionality
@@ -178,16 +218,33 @@ function markComplete(id) {
 
 function deleteChore(id) {
     if (confirm('Are you sure you want to delete this chore?')) {
-        chores = chores.filter(c => c.id !== id);
-        saveChores();
-        loadChores();
-        updateStatistics();
-        showNotification('🗑️ Chore deleted');
+        db.collection('chores').doc(id.toString()).delete()
+            .then(() => {
+                chores = chores.filter(c => c.id !== id);
+                loadChores();
+                updateStatistics();
+                showNotification('🗑️ Chore deleted');
+            })
+            .catch(error => {
+                console.error('Error deleting chore:', error);
+                showNotification('❌ Failed to delete chore. Please try again later.');
+            });
     }
 }
 
 function saveChores() {
-    localStorage.setItem('roomieHub_chores', JSON.stringify(chores));
+    chores.forEach(chore => {
+        if (chore.id) {
+            // Update existing chore
+            db.collection('chores').doc(chore.id.toString()).set(chore)
+                .catch(error => console.error('Error updating chore:', error));
+        } else {
+            // Add new chore
+            db.collection('chores').add(chore)
+                .then(docRef => chore.id = docRef.id)
+                .catch(error => console.error('Error adding chore:', error));
+        }
+    });
 }
 
 // Message Board Functions
@@ -259,18 +316,35 @@ function loadMessages() {
     });
 }
 
-function deleteMessage(id) {
-    if (confirm('Are you sure you want to delete this message?')) {
-        messages = messages.filter(m => m.id !== id);
-        saveMessages();
-        loadMessages();
-        updateStatistics();
-        showNotification('🗑️ Message deleted');
-    }
+function saveMessages() {
+    messages.forEach(message => {
+        if (message.id) {
+            // Update existing message
+            db.collection('messages').doc(message.id.toString()).set(message)
+                .catch(error => console.error('Error updating message:', error));
+        } else {
+            // Add new message
+            db.collection('messages').add(message)
+                .then(docRef => message.id = docRef.id)
+                .catch(error => console.error('Error adding message:', error));
+        }
+    });
 }
 
-function saveMessages() {
-    localStorage.setItem('roomieHub_messages', JSON.stringify(messages));
+function deleteMessage(id) {
+    if (confirm('Are you sure you want to delete this message?')) {
+        db.collection('messages').doc(id.toString()).delete()
+            .then(() => {
+                messages = messages.filter(m => m.id !== id);
+                loadMessages();
+                updateStatistics();
+                showNotification('🗑️ Message deleted');
+            })
+            .catch(error => {
+                console.error('Error deleting message:', error);
+                showNotification('❌ Failed to delete message. Please try again later.');
+            });
+    }
 }
 
 // Statistics and UI Updates
@@ -325,59 +399,84 @@ function showNotification(message) {
     }, 3000);
 }
 
-function addSampleData() {
-    // Sample chores
-    chores = [
-        {
-            id: 1,
-            text: 'Take out trash and recycling',
-            assignee: 'Alex',
-            completed: false,
-            dateAdded: new Date().toLocaleDateString(),
-            priority: 'high'
-        },
-        {
-            id: 2,
-            text: 'Clean kitchen counters',
-            assignee: 'Jordan',
-            completed: true,
-            dateAdded: new Date(Date.now() - 86400000).toLocaleDateString(),
-            completedDate: new Date().toLocaleDateString(),
-            priority: 'medium'
-        },
-        {
-            id: 3,
-            text: 'Vacuum living room',
-            assignee: 'Taylor',
-            completed: false,
-            dateAdded: new Date().toLocaleDateString(),
-            priority: 'low'
-        }
-    ];
+// Show login modal if user is not authenticated
+function showLoginModal() {
+    const loginModal = document.getElementById('loginModal');
+    loginModal.classList.remove('hidden');
+}
 
-    // Sample messages
-    messages = [
-        {
-            id: 1,
-            author: 'Alex',
-            text: 'Welcome to RoomieHub! 🎉 This is our new shared dashboard for managing chores and staying connected.',
-            timestamp: new Date().toLocaleString(),
-            isNew: true
-        },
-        {
-            id: 2,
-            author: 'Jordan',
-            text: 'Love the new design! Much easier to keep track of everything. Also, who ate my leftover pizza? 🍕😤',
-            timestamp: new Date(Date.now() - 3600000).toLocaleString(),
-            isNew: true
-        }
-    ];
+// Hide login modal
+function hideLoginModal() {
+    const loginModal = document.getElementById('loginModal');
+    loginModal.classList.add('hidden');
+}
 
-    saveChores();
-    saveMessages();
-    loadChores();
-    loadMessages();
-    updateStatistics();
+// Firebase Authentication
+signInButton.addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+        .then(result => {
+            currentUser = result.user;
+            updateUIForAuth();
+            showNotification(`👋 Welcome, ${currentUser.displayName}!`);
+        })
+        .catch(error => {
+            console.error('Error during sign-in:', error);
+            showNotification('❌ Sign-in failed. Please try again.');
+        });
+});
+
+signOutButton.addEventListener('click', () => {
+    auth.signOut()
+        .then(() => {
+            currentUser = null;
+            updateUIForAuth();
+            showNotification('👋 You have signed out.');
+        })
+        .catch(error => {
+            console.error('Error during sign-out:', error);
+            showNotification('❌ Sign-out failed. Please try again.');
+        });
+});
+
+// Google Sign-In Button
+const googleSignInButton = document.getElementById('googleSignInButton');
+googleSignInButton.addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+        .then(result => {
+            currentUser = result.user;
+            hideLoginModal();
+            updateUIForAuth();
+            showNotification(`👋 Welcome, ${currentUser.displayName}!`);
+        })
+        .catch(error => {
+            console.error('Error during Google sign-in:', error);
+            showNotification('❌ Google sign-in failed. Please try again.');
+        });
+});
+
+// Email Sign-In Button
+const emailSignInButton = document.getElementById('emailSignInButton');
+emailSignInButton.addEventListener('click', () => {
+    showNotification('⚠️ Email sign-in is not implemented yet.');
+});
+
+function updateUIForAuth() {
+    if (currentUser) {
+        signInButton.classList.add('hidden');
+        signOutButton.classList.remove('hidden');
+        // Filter chores and messages by user
+        loadChoresFromFirestore();
+        loadMessagesFromFirestore();
+    } else {
+        signInButton.classList.remove('hidden');
+        signOutButton.classList.add('hidden');
+        chores = [];
+        messages = [];
+        loadChores();
+        loadMessages();
+    }
 }
 
 // Keyboard shortcuts
