@@ -1,7 +1,2 @@
 User-agent: *
-Allow: /
-
-# RoomieHub - Smart Roommate Portal
-# A modern web app for roommates to manage chores and communicate
-
-Sitemap: https://yourdomain.com/sitemap.xml /
+Disallow: /
