@@ -34,6 +34,11 @@ body {
     display: none;
 }
 
+/* Ensure the modal is hidden by default */
+.hidden {
+    display: none !important;
+}
+
 /* Animations */
 @keyframes slideInUp {
     from {

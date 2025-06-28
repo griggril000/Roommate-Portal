@@ -15,6 +15,15 @@ const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
+// Set Firebase Authentication persistence to local
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .then(() => {
+        console.log("Persistence set to local.");
+    })
+    .catch((error) => {
+        console.error("Error setting persistence:", error);
+    });
+
 // Data storage
 let chores = JSON.parse(localStorage.getItem('roomieHub_chores')) || [];
 let messages = JSON.parse(localStorage.getItem('roomieHub_messages')) || [];
@@ -39,18 +48,165 @@ const signInButton = document.getElementById('signInButton');
 const signOutButton = document.getElementById('signOutButton');
 let currentUser = null;
 
+// Declare variables at the top of the script to avoid redeclaration
+let googleSignInButton = null;
+let emailSignInButton = null;
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', function () {
     initializeApp();
+
+    // Initialize buttons only once in a setup function or at the start of the script
+    googleSignInButton = document.getElementById('googleSignInButton');
+    emailSignInButton = document.getElementById('emailSignInButton');
+
+    if (googleSignInButton) {
+        googleSignInButton.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then(result => {
+                    currentUser = result.user;
+                    hideLoginModal();
+                    updateUIForAuth();
+                    showNotification(`👋 Welcome, ${currentUser.displayName}!`);
+                })
+                .catch(error => {
+                    console.error('Error during Google sign-in:', error);
+                    showNotification('❌ Google sign-in failed. Please try again.');
+                });
+        });
+    }
+
+    if (emailSignInButton) {
+        emailSignInButton.addEventListener('click', () => {
+            const loginModal = document.getElementById('loginModal');
+            loginModal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Sign In with Email</h2>
+                    <form id="emailLoginForm" class="space-y-4">
+                        <input type="email" id="emailInput" class="w-full px-4 py-2 border rounded-lg" placeholder="Email" required />
+                        <input type="password" id="passwordInput" class="w-full px-4 py-2 border rounded-lg" placeholder="Password" required />
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">Sign In</button>
+                    </form>
+                    <div class="text-sm text-center mt-4">
+                        <button id="showSignUp" class="text-blue-600 hover:underline">Create an account</button>
+                        <span class="mx-2">|</span>
+                        <button id="showResetPassword" class="text-blue-600 hover:underline">Forgot password?</button>
+                    </div>
+                </div>
+            `;
+
+            const emailLoginForm = document.getElementById('emailLoginForm');
+            emailLoginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('emailInput').value;
+                const password = document.getElementById('passwordInput').value;
+
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(result => {
+                        currentUser = result.user;
+                        hideLoginModal();
+                        updateUIForAuth();
+                        showNotification(`👋 Welcome, ${currentUser.email}!`);
+                    })
+                    .catch(error => {
+                        console.error('Error during email sign-in:', error);
+                        showNotification('❌ Email sign-in failed. Please check your credentials.');
+                    });
+            });
+
+            document.getElementById('showSignUp').addEventListener('click', () => {
+                loginModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Sign Up</h2>
+                        <form id="signUpForm" class="space-y-4">
+                            <input type="email" id="signUpEmail" class="w-full px-4 py-2 border rounded-lg" placeholder="Email" required />
+                            <input type="password" id="signUpPassword" class="w-full px-4 py-2 border rounded-lg" placeholder="Password" required />
+                            <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">Sign Up</button>
+                        </form>
+                        <div class="text-sm text-center mt-4">
+                            <button id="backToSignIn" class="text-blue-600 hover:underline">Back to Sign In</button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('signUpForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('signUpEmail').value;
+                    const password = document.getElementById('signUpPassword').value;
+
+                    auth.createUserWithEmailAndPassword(email, password)
+                        .then(result => {
+                            currentUser = result.user;
+                            hideLoginModal();
+                            updateUIForAuth();
+                            showNotification(`🎉 Account created! Welcome, ${currentUser.email}!`);
+                        })
+                        .catch(error => {
+                            console.error('Error during sign-up:', error);
+                            showNotification('❌ Sign-up failed. Please try again.');
+                        });
+                });
+
+                document.getElementById('backToSignIn').addEventListener('click', () => {
+                    emailSignInButton.click();
+                });
+            });
+
+            document.getElementById('showResetPassword').addEventListener('click', () => {
+                loginModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Reset Password</h2>
+                        <form id="resetPasswordForm" class="space-y-4">
+                            <input type="email" id="resetEmail" class="w-full px-4 py-2 border rounded-lg" placeholder="Email" required />
+                            <button type="submit" class="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors">Reset Password</button>
+                        </form>
+                        <div class="text-sm text-center mt-4">
+                            <button id="backToSignInFromReset" class="text-blue-600 hover:underline">Back to Sign In</button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('resetPasswordForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('resetEmail').value;
+
+                    auth.sendPasswordResetEmail(email)
+                        .then(() => {
+                            showNotification('📧 Password reset email sent! Check your inbox.');
+                            emailSignInButton.click();
+                        })
+                        .catch(error => {
+                            console.error('Error during password reset:', error);
+                            showNotification('❌ Failed to send password reset email. Please try again.');
+                        });
+                });
+
+                document.getElementById('backToSignInFromReset').addEventListener('click', () => {
+                    emailSignInButton.click();
+                });
+            });
+        });
+    }
 });
 
 function initializeApp() {
     updateUIForAuth();
 
-    if (!currentUser) {
-        showLoginModal();
-    }
+    // Initialize tab to chores
+    switchTab('chores');
 }
+
+// Check authentication state on page load
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        updateUIForAuth();
+    } else {
+        currentUser = null;
+        updateUIForAuth();
+    }
+});
 
 // Load chores from Firestore
 function loadChoresFromFirestore() {
@@ -391,24 +547,33 @@ function showNotification(message) {
 
     document.body.appendChild(notification);
 
-    // Auto remove after 3 seconds
+    // Auto remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
             notification.remove();
         }
-    }, 3000);
+    }, 5000);
 }
 
 // Show login modal if user is not authenticated
 function showLoginModal() {
     const loginModal = document.getElementById('loginModal');
     loginModal.classList.remove('hidden');
+
+    // Disable scrolling and clicking on the site
+    document.body.style.overflow = 'hidden';
+    document.body.style.pointerEvents = 'none';
+    loginModal.style.pointerEvents = 'auto'; // Allow interaction with the modal
 }
 
 // Hide login modal
 function hideLoginModal() {
     const loginModal = document.getElementById('loginModal');
     loginModal.classList.add('hidden');
+
+    // Re-enable scrolling and clicking on the site
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = '';
 }
 
 // Firebase Authentication
@@ -439,39 +604,27 @@ signOutButton.addEventListener('click', () => {
         });
 });
 
-// Google Sign-In Button
-const googleSignInButton = document.getElementById('googleSignInButton');
-googleSignInButton.addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-        .then(result => {
-            currentUser = result.user;
-            hideLoginModal();
-            updateUIForAuth();
-            showNotification(`👋 Welcome, ${currentUser.displayName}!`);
-        })
-        .catch(error => {
-            console.error('Error during Google sign-in:', error);
-            showNotification('❌ Google sign-in failed. Please try again.');
-        });
-});
-
-// Email Sign-In Button
-const emailSignInButton = document.getElementById('emailSignInButton');
-emailSignInButton.addEventListener('click', () => {
-    showNotification('⚠️ Email sign-in is not implemented yet.');
-});
-
 function updateUIForAuth() {
     if (currentUser) {
+        // Hide sign-in button and show sign-out button
         signInButton.classList.add('hidden');
         signOutButton.classList.remove('hidden');
-        // Filter chores and messages by user
+
+        // Hide login modal if user is logged in
+        hideLoginModal();
+
+        // Load user-specific data
         loadChoresFromFirestore();
         loadMessagesFromFirestore();
     } else {
+        // Show sign-in button and hide sign-out button
         signInButton.classList.remove('hidden');
         signOutButton.classList.add('hidden');
+
+        // Show login modal if user is logged out
+        showLoginModal();
+
+        // Clear data from UI
         chores = [];
         messages = [];
         loadChores();
@@ -500,7 +653,7 @@ document.addEventListener('keydown', function (e) {
             switchTab('messages');
         }
     }
-});
+}); // Ensure proper closure of the function or block
 
 // Auto-resize textarea
 messageInput.addEventListener('input', function () {
