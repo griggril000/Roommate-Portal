@@ -220,6 +220,37 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    // Set up sign-out button event listeners
+    if (signOutButton) {
+        signOutButton.addEventListener('click', () => {
+            auth.signOut();
+        });
+    }
+
+    if (signOutButtonMobile) {
+        signOutButtonMobile.addEventListener('click', () => {
+            auth.signOut();
+        });
+    }
+
+    // Set up household management button event listeners
+    if (householdManagementBtn) {
+        householdManagementBtn.addEventListener('click', showHouseholdManagement);
+    }
+
+    if (householdManagementBtnMobile) {
+        householdManagementBtnMobile.addEventListener('click', showHouseholdManagement);
+    }
+
+    // Set up main sign-in button event listeners to show login modal
+    if (signInButton) {
+        signInButton.addEventListener('click', showLoginModal);
+    }
+
+    if (signInButtonMobile) {
+        signInButtonMobile.addEventListener('click', showLoginModal);
+    }
 });
 
 function initializeApp() {
@@ -330,6 +361,22 @@ function hideHouseholdModal() {
     if (householdModal) {
         householdModal.classList.add('hidden');
         document.body.style.overflow = '';
+    }
+}
+
+function hideLoginModal() {
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+        loginModal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+}
+
+function showLoginModal() {
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+        loginModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
     }
 }
 
@@ -598,6 +645,7 @@ function cleanupData() {
     if (messageInput) messageInput.value = '';
     if (authorInput) {
         authorInput.value = '';
+        authorInput.readOnly = false; // Make it editable again
     }
 
     // Always update UI to show empty state, but don't hide main content
@@ -1280,6 +1328,12 @@ function showHouseholdManagement() {
                         Close
                     </button>
                 </div>
+                
+                <div class="pt-3 border-t border-gray-200 mt-3">
+                    <button id="deleteAccountBtn" class="w-full px-4 py-2 bg-red-800 text-white rounded-lg font-medium hover:bg-red-900 transition-colors text-sm">
+                        ⚠️ Delete Account Permanently
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -1289,6 +1343,7 @@ function showHouseholdManagement() {
 
     // Add event listeners
     document.getElementById('leaveHouseholdBtn').addEventListener('click', leaveHousehold);
+    document.getElementById('deleteAccountBtn').addEventListener('click', deleteUserAccount);
     document.getElementById('closeHouseholdManagementBtn').addEventListener('click', () => {
         modal.remove();
         document.body.style.overflow = '';
@@ -1301,19 +1356,22 @@ async function leaveHousehold() {
     const isAdmin = currentHousehold.memberDetails[currentUser.uid]?.role === 'admin';
     const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
 
-    let confirmMessage = 'Are you sure you want to leave this household?';
+    let confirmMessage = 'Are you sure you want to leave this household? This will delete all your chores and messages in this household.';
     if (isAdmin && memberCount > 1) {
-        confirmMessage = 'You are the admin of this household. Leaving will transfer admin rights to another member. Are you sure?';
+        confirmMessage = 'You are the admin of this household. Leaving will transfer admin rights to another member and delete all your data. Are you sure?';
     } else if (isAdmin && memberCount === 1) {
-        confirmMessage = 'You are the only member of this household. Leaving will delete the household permanently. Are you sure?';
+        confirmMessage = 'You are the only member of this household. Leaving will delete the household and ALL data permanently. Are you sure?';
     }
 
     if (confirm(confirmMessage)) {
         try {
+            // Delete user's data from the household
+            await deleteUserDataFromHousehold(currentUser.uid, currentHousehold.id);
+
             if (memberCount === 1) {
-                // Delete the household entirely
-                await db.collection('households').doc(currentHousehold.id).delete();
-                showNotification('🏠 Household deleted successfully.');
+                // Delete the household entirely (including all remaining data)
+                await deleteEntireHousehold(currentHousehold.id);
+                showNotification('🏠 Household and all data deleted successfully.');
             } else {
                 // Remove user from household
                 await db.collection('households').doc(currentHousehold.id).update({
@@ -1331,7 +1389,7 @@ async function leaveHousehold() {
                     }
                 }
 
-                showNotification('👋 You have left the household.');
+                showNotification('👋 You have left the household and your data has been deleted.');
             }
 
             // Remove household reference from user
@@ -1358,23 +1416,168 @@ async function leaveHousehold() {
     }
 }
 
-// Utility Functions
-function getAvatarEmoji(name) {
-    const avatars = ['👨‍💻', '👩‍🎨', '👨‍🍳', '👩‍🔬', '👨‍🎵', '👩‍💼', '👨‍🏫', '👩‍⚕️'];
-    const hash = name.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-    }, 0);
-    return avatars[Math.abs(hash) % avatars.length];
+// Data cleanup functions
+async function deleteUserDataFromHousehold(userId, householdId) {
+    try {
+        const batch = db.batch();
+
+        // Delete all chores created by this user
+        const userChoresQuery = await db.collection('chores')
+            .where('householdId', '==', householdId)
+            .where('createdBy', '==', userId)
+            .get();
+
+        userChoresQuery.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Delete all messages posted by this user
+        const userMessagesQuery = await db.collection('messages')
+            .where('householdId', '==', householdId)
+            .where('authorId', '==', userId)
+            .get();
+
+        userMessagesQuery.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Remove user from readBy arrays in remaining messages
+        const allMessagesQuery = await db.collection('messages')
+            .where('householdId', '==', householdId)
+            .get();
+
+        allMessagesQuery.docs.forEach(doc => {
+            const messageData = doc.data();
+            if (messageData.readBy && messageData.readBy.includes(userId)) {
+                batch.update(doc.ref, {
+                    readBy: firebase.firestore.FieldValue.arrayRemove(userId)
+                });
+            }
+        });
+
+        // Commit all deletions and updates
+        await batch.commit();
+        console.log(`Deleted all data for user ${userId} from household ${householdId}`);
+    } catch (error) {
+        console.error('Error deleting user data from household:', error);
+        throw error;
+    }
 }
 
+async function deleteEntireHousehold(householdId) {
+    try {
+        const batch = db.batch();
+
+        // Delete all chores in the household
+        const choresQuery = await db.collection('chores')
+            .where('householdId', '==', householdId)
+            .get();
+
+        choresQuery.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Delete all messages in the household
+        const messagesQuery = await db.collection('messages')
+            .where('householdId', '==', householdId)
+            .get();
+
+        messagesQuery.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Delete the household document itself
+        batch.delete(db.collection('households').doc(householdId));
+
+        // Commit all deletions
+        await batch.commit();
+        console.log(`Deleted entire household ${householdId} and all associated data`);
+    } catch (error) {
+        console.error('Error deleting entire household:', error);
+        throw error;
+    }
+}
+
+async function deleteUserAccount() {
+    if (!currentUser) {
+        showNotification('❌ No user is currently signed in.');
+        return;
+    }
+
+    const confirmMessage = 'Are you sure you want to delete your account? This will:\n\n' +
+        '• Remove you from your current household\n' +
+        '• Delete all your chores and messages\n' +
+        '• Permanently delete your account\n\n' +
+        'This action cannot be undone!';
+
+    if (confirm(confirmMessage)) {
+        try {
+            // If user is part of a household, clean up their data first
+            if (currentHousehold) {
+                await deleteUserDataFromHousehold(currentUser.uid, currentHousehold.id);
+
+                // Check if user was the only member
+                const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
+                if (memberCount === 1) {
+                    // Delete the entire household
+                    await deleteEntireHousehold(currentHousehold.id);
+                } else {
+                    // Remove user from household
+                    await db.collection('households').doc(currentHousehold.id).update({
+                        members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
+                        [`memberDetails.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
+                    });
+
+                    // If user was admin, transfer admin to first remaining member
+                    const isAdmin = currentHousehold.memberDetails[currentUser.uid]?.role === 'admin';
+                    if (isAdmin) {
+                        const remainingMembers = Object.keys(currentHousehold.memberDetails).filter(uid => uid !== currentUser.uid);
+                        if (remainingMembers.length > 0) {
+                            await db.collection('households').doc(currentHousehold.id).update({
+                                [`memberDetails.${remainingMembers[0]}.role`]: 'admin'
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Delete user document from Firestore
+            await db.collection('users').doc(currentUser.uid).delete();
+
+            // Delete the Firebase Auth user account
+            await currentUser.delete();
+
+            // Clear local state
+            currentUser = null;
+            currentHousehold = null;
+            cleanupData();
+            clearLocalStorage();
+            updateUIForAuth();
+            clearLocalStorage();
+
+            showNotification('✅ Your account has been deleted successfully.');
+
+        } catch (error) {
+            console.error('Error deleting user account:', error);
+            if (error.code === 'auth/requires-recent-login') {
+                showNotification('❌ Please sign in again to delete your account (for security).');
+            } else {
+                showNotification('❌ Failed to delete account. Please try again.');
+            }
+        }
+    }
+}
+
+// Utility functions
 function showNotification(message) {
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 bg-white border border-gray-200 p-4 rounded-lg shadow-md z-50 animate-slide-in';
+    notification.className = 'fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm z-50 transform translate-x-full transition-transform duration-300';
     notification.innerHTML = `
-        <div class="flex items-center space-x-2">
-            <span class="text-gray-800">${message}</span>
+        <div class="flex items-start space-x-3">
+            <div class="flex-1">
+                <p class="text-sm text-gray-800">${message}</p>
+            </div>
             <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
                 <i class="fas fa-times"></i>
             </button>
@@ -1383,82 +1586,31 @@ function showNotification(message) {
 
     document.body.appendChild(notification);
 
-    // Auto remove after 5 seconds
+    // Animate in
     setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
+        notification.classList.remove('translate-x-full');
+    }, 100);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 300);
     }, 5000);
 }
 
-// Show login modal if user is not authenticated
-function showLoginModal() {
-    const loginModal = document.getElementById('loginModal');
-    loginModal.classList.remove('hidden');
-
-    // Disable scrolling but allow background to be visible
-    document.body.style.overflow = 'hidden';
-    // Don't disable pointer events on body - let the modal handle it
+function getAvatarEmoji(name) {
+    const emojis = ['👨', '👩', '🧑', '👨‍💻', '👩‍💻', '👨‍🎓', '👩‍🎓', '👨‍🏫', '👩‍🏫', '👨‍⚕️', '👩‍⚕️', '👨‍🍳', '👩‍🍳', '👨‍🎨', '👩‍🎨'];
+    const index = name ? name.charCodeAt(0) % emojis.length : 0;
+    return emojis[index];
 }
 
-// Hide login modal
-function hideLoginModal() {
-    const loginModal = document.getElementById('loginModal');
-    loginModal.classList.add('hidden');
-
-    // Re-enable scrolling
-    document.body.style.overflow = '';
-}
-
-// Firebase Authentication
-if (signInButton) {
-    signInButton.addEventListener('click', () => {
-        showLoginModal();
-    });
-}
-
-if (signInButtonMobile) {
-    signInButtonMobile.addEventListener('click', () => {
-        showLoginModal();
-    });
-}
-
-if (signOutButton) {
-    signOutButton.addEventListener('click', () => {
-        auth.signOut()
-            .then(() => {
-                currentUser = null;
-                currentHousehold = null;
-                updateUIForAuth();
-                showNotification('👋 You have signed out.');
-            })
-            .catch(error => {
-                console.error('Error during sign-out:', error);
-                showNotification('❌ Sign-out failed. Please try again.');
-            });
-    });
-}
-
-if (signOutButtonMobile) {
-    signOutButtonMobile.addEventListener('click', () => {
-        auth.signOut()
-            .then(() => {
-                currentUser = null;
-                currentHousehold = null;
-                updateUIForAuth();
-                showNotification('👋 You have signed out.');
-            })
-            .catch(error => {
-                console.error('Error during sign-out:', error);
-                showNotification('❌ Sign-out failed. Please try again.');
-            });
-    });
-}
-
-if (householdManagementBtn) {
-    householdManagementBtn.addEventListener('click', showHouseholdManagement);
-}
-
-if (householdManagementBtnMobile) {
-    householdManagementBtnMobile.addEventListener('click', showHouseholdManagement);
+// Clear localStorage function
+function clearLocalStorage() {
+    localStorage.removeItem('roommatePortal_chores');
+    localStorage.removeItem('roommatePortal_messages');
+    console.log('Local storage cleared');
 }
