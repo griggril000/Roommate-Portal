@@ -40,6 +40,10 @@ let messages = JSON.parse(localStorage.getItem('roomieHub_messages')) || [];
 let currentHousehold = null;
 let userHouseholds = [];
 
+// Firestore listeners (to manage cleanup)
+let choresListener = null;
+let messagesListener = null;
+
 // DOM elements
 const choreInput = document.getElementById('choreInput');
 const choreAssignee = document.getElementById('choreAssignee');
@@ -59,6 +63,14 @@ const newMessagesCount = document.getElementById('newMessagesCount');
 const signInButton = document.getElementById('signInButton');
 const signOutButton = document.getElementById('signOutButton');
 const householdManagementBtn = document.getElementById('householdManagementBtn');
+
+// Mobile buttons
+const signInButtonMobile = document.getElementById('signInButtonMobile');
+const signOutButtonMobile = document.getElementById('signOutButtonMobile');
+const householdManagementBtnMobile = document.getElementById('householdManagementBtnMobile');
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+
 let currentUser = null;
 
 // Declare variables at the top of the script to avoid redeclaration
@@ -72,6 +84,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize buttons only once in a setup function or at the start of the script
     googleSignInButton = document.getElementById('googleSignInButton');
     emailSignInButton = document.getElementById('emailSignInButton');
+
+    // Mobile menu toggle
+    if (mobileMenuBtn && mobileMenu) {
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
 
     if (googleSignInButton) {
         googleSignInButton.addEventListener('click', () => {
@@ -204,6 +223,46 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function initializeApp() {
+    // Ensure header is always visible
+    const header = document.querySelector('header');
+    if (header) {
+        header.style.display = 'block';
+        header.style.opacity = '1';
+        header.style.visibility = 'visible';
+    }
+
+    // Force correct responsive header display
+    const desktopHeader = document.querySelector('.hidden.md\\:flex');
+    const mobileHeader = document.querySelector('.flex.flex-col.md\\:hidden');
+
+    if (window.innerWidth >= 768) {
+        // Desktop view
+        if (desktopHeader) {
+            desktopHeader.style.display = 'flex';
+            desktopHeader.classList.remove('hidden');
+        }
+        if (mobileHeader) {
+            mobileHeader.style.display = 'none';
+        }
+    } else {
+        // Mobile view
+        if (mobileHeader) {
+            mobileHeader.style.display = 'flex';
+        }
+        if (desktopHeader) {
+            desktopHeader.style.display = 'none';
+            desktopHeader.classList.add('hidden');
+        }
+    }
+
+    // Ensure main content is visible but disabled initially if no user is logged in
+    const mainContent = document.getElementById('mainContent');
+    if (!currentUser && mainContent) {
+        mainContent.style.display = 'block';
+        mainContent.style.opacity = '0.3';
+        mainContent.style.pointerEvents = 'none';
+    }
+
     updateUIForAuth();
 
     // Initialize tab to chores
@@ -218,6 +277,8 @@ auth.onAuthStateChanged((user) => {
     } else {
         currentUser = null;
         currentHousehold = null;
+        // Clean up data and listeners immediately when user logs out
+        cleanupData();
         updateUIForAuth();
     }
 });
@@ -262,8 +323,6 @@ function showHouseholdModal() {
     const modal = document.getElementById('householdModal');
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    document.body.style.pointerEvents = 'none';
-    modal.style.pointerEvents = 'auto';
 }
 
 function hideHouseholdModal() {
@@ -271,13 +330,12 @@ function hideHouseholdModal() {
     if (householdModal) {
         householdModal.classList.add('hidden');
         document.body.style.overflow = '';
-        document.body.style.pointerEvents = '';
     }
 }
 
 function createHouseholdModal() {
     const modalHTML = `
-        <div id="householdModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+        <div id="householdModal" class="fixed inset-0 bg-gray-800 bg-opacity-40 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-md mx-4">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">🏠 Household Setup</h2>
                 <p class="text-gray-600 mb-6">You need to create or join a household to continue.</p>
@@ -478,17 +536,54 @@ function generateHouseholdCode() {
 
 function loadHouseholdData() {
     if (currentHousehold) {
+        // Enable main content when household data is loaded
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '1';
+            mainContent.style.pointerEvents = 'auto';
+        }
+
         loadChoresFromFirestore();
         loadMessagesFromFirestore();
         updateHouseholdMembers();
     }
 }
 
+// Clean up listeners and data when logging out
+function cleanupData() {
+    // Stop listening to Firestore
+    if (choresListener) {
+        choresListener();
+        choresListener = null;
+    }
+
+    if (messagesListener) {
+        messagesListener();
+        messagesListener = null;
+    }
+
+    // Clear data arrays
+    chores = [];
+    messages = [];
+
+    // Always update UI to show empty state, but don't hide main content
+    loadChores();
+    loadMessages();
+    updateStatistics();
+}
+
 // Load chores from Firestore (updated for household)
 function loadChoresFromFirestore() {
     if (!currentHousehold) return;
 
-    db.collection('chores')
+    // Clean up any existing listener
+    if (choresListener) {
+        choresListener();
+        choresListener = null;
+    }
+
+    choresListener = db.collection('chores')
         .where('householdId', '==', currentHousehold.id)
         .onSnapshot((snapshot) => {
             chores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -496,7 +591,10 @@ function loadChoresFromFirestore() {
             updateStatistics();
         }, (error) => {
             console.error('Error loading chores:', error);
-            showNotification('❌ Failed to load chores. Please try again later.');
+            // Only show error notification if user is still logged in and has a household
+            if (currentUser && currentHousehold) {
+                showNotification('❌ Failed to load chores. Please try again later.');
+            }
         });
 }
 
@@ -504,7 +602,13 @@ function loadChoresFromFirestore() {
 function loadMessagesFromFirestore() {
     if (!currentHousehold) return;
 
-    db.collection('messages')
+    // Clean up any existing listener
+    if (messagesListener) {
+        messagesListener();
+        messagesListener = null;
+    }
+
+    messagesListener = db.collection('messages')
         .where('householdId', '==', currentHousehold.id)
         .onSnapshot((snapshot) => {
             messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -517,7 +621,10 @@ function loadMessagesFromFirestore() {
             loadMessages();
         }, (error) => {
             console.error('Error loading messages:', error);
-            showNotification('❌ Failed to load messages. Please try again later.');
+            // Only show error notification if user is still logged in and has a household
+            if (currentUser && currentHousehold) {
+                showNotification('❌ Failed to load messages. Please try again later.');
+            }
         });
 }
 
@@ -619,11 +726,17 @@ function loadChores() {
     choreList.innerHTML = '';
 
     if (chores.length === 0) {
+        const emptyStateMessage = !currentUser ?
+            '<p>Sign in to manage your household chores and tasks.</p>' :
+            !currentHousehold ?
+                '<p>Join or create a household to start managing chores together.</p>' :
+                '<p>Add your first chore using the form above to get started.</p>';
+
         choreList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-tasks"></i>
                 <h3>No chores yet!</h3>
-                <p>Add your first chore using the form above to get started.</p>
+                ${emptyStateMessage}
             </div>
         `;
         return;
@@ -679,6 +792,12 @@ function loadChores() {
 }
 
 function toggleChore(id) {
+    // Don't proceed if user is not logged in
+    if (!currentUser || !currentHousehold) {
+        showNotification('❌ You must be logged in and part of a household to manage chores.');
+        return;
+    }
+
     const chore = chores.find(c => c.id === id);
     if (chore) {
         chore.completed = !chore.completed;
@@ -701,6 +820,12 @@ function toggleChore(id) {
 }
 
 function markComplete(id) {
+    // Don't proceed if user is not logged in
+    if (!currentUser || !currentHousehold) {
+        showNotification('❌ You must be logged in and part of a household to manage chores.');
+        return;
+    }
+
     const chore = chores.find(c => c.id === id);
     if (chore) {
         chore.completed = true;
@@ -720,6 +845,12 @@ function markComplete(id) {
 }
 
 function deleteChore(id) {
+    // Don't proceed if user is not logged in
+    if (!currentUser || !currentHousehold) {
+        showNotification('❌ You must be logged in and part of a household to manage chores.');
+        return;
+    }
+
     if (confirm('Are you sure you want to delete this chore?')) {
         db.collection('chores').doc(id).delete()
             .then(() => {
@@ -774,11 +905,17 @@ function loadMessages() {
     messageList.innerHTML = '';
 
     if (messages.length === 0) {
+        const emptyStateMessage = !currentUser ?
+            '<p>Sign in to see messages from your roommates.</p>' :
+            !currentHousehold ?
+                '<p>Join or create a household to start messaging with roommates.</p>' :
+                '<p>Be the first to post a message to your roommates.</p>';
+
         messageList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-comments"></i>
                 <h3>No messages yet!</h3>
-                <p>Be the first to post a message to your roommates.</p>
+                ${emptyStateMessage}
             </div>
         `;
         return;
@@ -790,7 +927,8 @@ function loadMessages() {
         messageElement.style.animationDelay = `${index * 0.1}s`;
 
         const avatarEmoji = getAvatarEmoji(message.author);
-        const isOwnMessage = message.authorId === currentUser.uid;
+        // Only check if it's own message if user is logged in
+        const isOwnMessage = currentUser && message.authorId === currentUser.uid;
 
         messageElement.innerHTML = `
             <div class="flex justify-between items-start mb-3">
@@ -814,6 +952,12 @@ function loadMessages() {
 }
 
 function deleteMessage(id) {
+    // Don't proceed if user is not logged in
+    if (!currentUser) {
+        showNotification('❌ You must be logged in to delete messages.');
+        return;
+    }
+
     const message = messages.find(m => m.id === id);
 
     // Check if user can delete this message (only their own messages)
@@ -899,10 +1043,9 @@ function showLoginModal() {
     const loginModal = document.getElementById('loginModal');
     loginModal.classList.remove('hidden');
 
-    // Disable scrolling and clicking on the site
+    // Disable scrolling but allow background to be visible
     document.body.style.overflow = 'hidden';
-    document.body.style.pointerEvents = 'none';
-    loginModal.style.pointerEvents = 'auto'; // Allow interaction with the modal
+    // Don't disable pointer events on body - let the modal handle it
 }
 
 // Hide login modal
@@ -910,14 +1053,28 @@ function hideLoginModal() {
     const loginModal = document.getElementById('loginModal');
     loginModal.classList.add('hidden');
 
-    // Re-enable scrolling and clicking on the site
+    // Re-enable scrolling
     document.body.style.overflow = '';
-    document.body.style.pointerEvents = '';
 }
 
 // Firebase Authentication
 if (signInButton) {
     signInButton.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider)
+            .then(result => {
+                currentUser = result.user;
+                showNotification(`👋 Welcome, ${currentUser.displayName}!`);
+            })
+            .catch(error => {
+                console.error('Error during sign-in:', error);
+                showNotification('❌ Sign-in failed. Please try again.');
+            });
+    });
+}
+
+if (signInButtonMobile) {
+    signInButtonMobile.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider)
             .then(result => {
@@ -947,16 +1104,70 @@ if (signOutButton) {
     });
 }
 
+if (signOutButtonMobile) {
+    signOutButtonMobile.addEventListener('click', () => {
+        auth.signOut()
+            .then(() => {
+                currentUser = null;
+                currentHousehold = null;
+                updateUIForAuth();
+                showNotification('👋 You have signed out.');
+            })
+            .catch(error => {
+                console.error('Error during sign-out:', error);
+                showNotification('❌ Sign-out failed. Please try again.');
+            });
+    });
+}
+
 if (householdManagementBtn) {
     householdManagementBtn.addEventListener('click', showHouseholdManagement);
 }
 
+if (householdManagementBtnMobile) {
+    householdManagementBtnMobile.addEventListener('click', showHouseholdManagement);
+}
+
 function updateUIForAuth() {
+    const mainContent = document.getElementById('mainContent');
+    const header = document.querySelector('header');
+
+    // Ensure header is always visible
+    if (header) {
+        header.style.display = 'block';
+        header.style.opacity = '1';
+        header.style.visibility = 'visible';
+        header.style.position = 'static';
+    }
+
+    // Force desktop header to be visible on desktop
+    const desktopHeader = document.querySelector('.hidden.md\\:flex');
+    if (desktopHeader && window.innerWidth >= 768) {
+        desktopHeader.style.display = 'flex';
+        desktopHeader.classList.remove('hidden');
+    }
+
+    // Force mobile header to be visible on mobile
+    const mobileHeader = document.querySelector('.flex.flex-col.md\\:hidden');
+    if (mobileHeader && window.innerWidth < 768) {
+        mobileHeader.style.display = 'flex';
+    }
+
     if (currentUser && currentHousehold) {
-        // Hide sign-in button and show sign-out button
+        // Show main content
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '1';
+            mainContent.style.pointerEvents = 'auto';
+        }
+
+        // Hide sign-in buttons and show sign-out buttons
         if (signInButton) signInButton.classList.add('hidden');
+        if (signInButtonMobile) signInButtonMobile.classList.add('hidden');
         if (signOutButton) signOutButton.classList.remove('hidden');
+        if (signOutButtonMobile) signOutButtonMobile.classList.remove('hidden');
         if (householdManagementBtn) householdManagementBtn.classList.remove('hidden');
+        if (householdManagementBtnMobile) householdManagementBtnMobile.classList.remove('hidden');
 
         // Hide login and household modals
         hideLoginModal();
@@ -965,34 +1176,55 @@ function updateUIForAuth() {
         // Update household info in header
         updateHouseholdHeader();
     } else if (currentUser && !currentHousehold) {
+        // Show main content but in disabled state when no household
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '0.3';
+            mainContent.style.pointerEvents = 'none';
+        }
+
         // User is logged in but not part of a household
         if (signInButton) signInButton.classList.add('hidden');
+        if (signInButtonMobile) signInButtonMobile.classList.add('hidden');
         if (signOutButton) signOutButton.classList.remove('hidden');
+        if (signOutButtonMobile) signOutButtonMobile.classList.remove('hidden');
         if (householdManagementBtn) householdManagementBtn.classList.add('hidden');
+        if (householdManagementBtnMobile) householdManagementBtnMobile.classList.add('hidden');
         hideLoginModal();
+
+        // Clean up data when no household
+        cleanupData();
+
         // Household modal will be shown by checkUserHousehold()
     } else {
-        // Show sign-in button and hide sign-out button
+        // Show main content but in disabled state when logged out
+        if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '0.3';
+            mainContent.style.pointerEvents = 'none';
+        }
+
+        // Show sign-in buttons and hide sign-out buttons
         if (signInButton) signInButton.classList.remove('hidden');
+        if (signInButtonMobile) signInButtonMobile.classList.remove('hidden');
         if (signOutButton) signOutButton.classList.add('hidden');
+        if (signOutButtonMobile) signOutButtonMobile.classList.add('hidden');
         if (householdManagementBtn) householdManagementBtn.classList.add('hidden');
+        if (householdManagementBtnMobile) householdManagementBtnMobile.classList.add('hidden');
 
         // Show login modal if user is logged out
         showLoginModal();
 
-        // Clear data from UI
-        chores = [];
-        messages = [];
-        loadChores();
-        loadMessages();
+        // Clean up all data and listeners when logged out
+        cleanupData();
     }
 }
 
 function updateHouseholdHeader() {
     if (!currentHousehold) return;
 
-    // Update header to show household name and code
-    const headerInfo = document.querySelector('header .flex.items-center.space-x-3 div:last-child');
+    // Update header to show household name and code (desktop)
+    const headerInfo = document.querySelector('header .hidden.md\\:flex .flex.items-center.space-x-3 div:last-child');
     if (headerInfo) {
         headerInfo.innerHTML = `
             <h1 class="text-2xl font-bold text-gray-800">
@@ -1004,13 +1236,37 @@ function updateHouseholdHeader() {
         `;
     }
 
-    // Update household info section
+    // Update mobile header title
+    const mobileHeaderInfo = document.querySelector('header .flex.flex-col .flex.items-center.space-x-3 div:last-child');
+    if (mobileHeaderInfo) {
+        mobileHeaderInfo.innerHTML = `
+            <h1 class="text-xl font-bold text-gray-800">
+                ${currentHousehold.name}
+            </h1>
+            <p class="text-xs text-gray-600">
+                Code: ${currentHousehold.code}
+            </p>
+        `;
+    }
+
+    // Update household info section (desktop)
     const householdInfo = document.getElementById('householdInfo');
     if (householdInfo && currentHousehold.memberDetails) {
         const memberCount = Object.keys(currentHousehold.memberDetails).length;
         householdInfo.innerHTML = `
             <span class="text-green-700 font-medium">
                 🏠 ${currentHousehold.name} • ${memberCount} member${memberCount !== 1 ? 's' : ''}
+            </span>
+        `;
+    }
+
+    // Update household info section (mobile)
+    const householdInfoMobile = document.getElementById('householdInfoMobile');
+    if (householdInfoMobile && currentHousehold.memberDetails) {
+        const memberCount = Object.keys(currentHousehold.memberDetails).length;
+        householdInfoMobile.innerHTML = `
+            <span class="text-green-700 font-medium text-sm">
+                🏠 ${memberCount} member${memberCount !== 1 ? 's' : ''}
             </span>
         `;
     }
@@ -1053,7 +1309,7 @@ function showHouseholdManagement() {
 
     const modal = document.createElement('div');
     modal.id = 'householdManagementModal';
-    modal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50';
+    modal.className = 'fixed inset-0 bg-gray-800 bg-opacity-40 flex items-center justify-center z-50';
 
     const membersList = Object.entries(currentHousehold.memberDetails || {})
         .map(([uid, member]) => `
@@ -1174,3 +1430,29 @@ async function leaveHousehold() {
         }
     }
 }
+
+// Handle window resize to ensure proper header display
+window.addEventListener('resize', function () {
+    const desktopHeader = document.querySelector('.hidden.md\\:flex');
+    const mobileHeader = document.querySelector('.flex.flex-col.md\\:hidden');
+
+    if (window.innerWidth >= 768) {
+        // Desktop view
+        if (desktopHeader) {
+            desktopHeader.style.display = 'flex';
+            desktopHeader.classList.remove('hidden');
+        }
+        if (mobileHeader) {
+            mobileHeader.style.display = 'none';
+        }
+    } else {
+        // Mobile view
+        if (mobileHeader) {
+            mobileHeader.style.display = 'flex';
+        }
+        if (desktopHeader) {
+            desktopHeader.style.display = 'none';
+            desktopHeader.classList.add('hidden');
+        }
+    }
+});
