@@ -814,6 +814,7 @@ if (addChoreForm) {
                 priority: 'medium',
                 householdId: currentHousehold.id,
                 createdBy: currentUser.uid,
+                createdByName: currentUser.displayName,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -831,6 +832,15 @@ if (addChoreForm) {
                 });
         }
     });
+}
+
+// Helper function to get user display name by UID
+function getUserDisplayName(uid) {
+    if (!uid) return 'Unknown User';
+    if (!currentHousehold || !currentHousehold.memberDetails) return 'Unknown User';
+
+    const member = currentHousehold.memberDetails[uid];
+    return member ? member.displayName : 'Former Member';
 }
 
 function loadChores() {
@@ -868,8 +878,12 @@ function loadChores() {
 
         const priorityIcon = chore.priority === 'high' ? '🔴' : chore.priority === 'low' ? '🟢' : '🟡';
         const isFormerMemberChore = chore.createdBy === 'former-member';
-        const creatorDisplay = isFormerMemberChore ?
-            `<span class="text-xs text-gray-500 italic">(Created by: ${chore.originalCreator || 'Former Member'})</span>` : '';
+        const createdByName = isFormerMemberChore ?
+            (chore.originalCreator || 'Former Member') :
+            (chore.createdByName || getUserDisplayName(chore.createdBy));
+        const completedByName = chore.completedBy ?
+            (chore.completedByName || getUserDisplayName(chore.completedBy)) :
+            null;
 
         choreElement.innerHTML = `
             <div class="flex items-start justify-between">
@@ -886,9 +900,9 @@ function loadChores() {
                             ${isFormerMemberChore ? '<span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">Legacy</span>' : ''}
                         </div>
                         <div class="chore-date">
-                            📅 Added: ${chore.dateAdded}
+                            📅 Added: ${chore.dateAdded} • Created by: <span class="font-medium">${createdByName}</span>
                             ${chore.completed ? ` | ✅ Completed: ${chore.completedDate || new Date().toLocaleDateString()}` : ''}
-                            ${creatorDisplay}
+                            ${chore.completed && completedByName ? ` • by: <span class="font-medium">${completedByName}</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -919,16 +933,24 @@ function toggleChore(id) {
         chore.completed = !chore.completed;
         if (chore.completed) {
             chore.completedDate = new Date().toLocaleDateString();
+            chore.completedBy = currentUser.uid;
+            chore.completedByName = currentUser.displayName;
             showNotification('🎉 Chore completed! Great job!');
         } else {
             delete chore.completedDate;
+            delete chore.completedBy;
+            delete chore.completedByName;
         }
 
         // Update in Firestore
-        db.collection('chores').doc(id).update({
+        const updateData = {
             completed: chore.completed,
-            completedDate: chore.completedDate || firebase.firestore.FieldValue.delete()
-        }).catch(error => {
+            completedDate: chore.completedDate || firebase.firestore.FieldValue.delete(),
+            completedBy: chore.completedBy || firebase.firestore.FieldValue.delete(),
+            completedByName: chore.completedByName || firebase.firestore.FieldValue.delete()
+        };
+
+        db.collection('chores').doc(id).update(updateData).catch(error => {
             console.error('Error updating chore:', error);
             showNotification('❌ Failed to update chore. Please try again.');
         });
@@ -946,11 +968,15 @@ function markComplete(id) {
     if (chore) {
         chore.completed = true;
         chore.completedDate = new Date().toLocaleDateString();
+        chore.completedBy = currentUser.uid;
+        chore.completedByName = currentUser.displayName;
 
         // Update in Firestore
         db.collection('chores').doc(id).update({
             completed: true,
-            completedDate: chore.completedDate
+            completedDate: chore.completedDate,
+            completedBy: chore.completedBy,
+            completedByName: chore.completedByName
         }).then(() => {
             showNotification('🎉 Awesome! Chore marked as complete!');
         }).catch(error => {
