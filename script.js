@@ -1108,31 +1108,13 @@ function hideLoginModal() {
 // Firebase Authentication
 if (signInButton) {
     signInButton.addEventListener('click', () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider)
-            .then(result => {
-                currentUser = result.user;
-                showNotification(`👋 Welcome, ${currentUser.displayName}!`);
-            })
-            .catch(error => {
-                console.error('Error during sign-in:', error);
-                showNotification('❌ Sign-in failed. Please try again.');
-            });
+        showLoginModal();
     });
 }
 
 if (signInButtonMobile) {
     signInButtonMobile.addEventListener('click', () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider)
-            .then(result => {
-                currentUser = result.user;
-                showNotification(`👋 Welcome, ${currentUser.displayName}!`);
-            })
-            .catch(error => {
-                console.error('Error during sign-in:', error);
-                showNotification('❌ Sign-in failed. Please try again.');
-            });
+        showLoginModal();
     });
 }
 
@@ -1261,8 +1243,8 @@ function updateUIForAuth() {
         if (householdManagementBtn) householdManagementBtn.classList.add('hidden');
         if (householdManagementBtnMobile) householdManagementBtnMobile.classList.add('hidden');
 
-        // Show login modal if user is logged out
-        showLoginModal();
+        // Hide login modal when logged out (only show when sign-in button is clicked)
+        hideLoginModal();
 
         // Clean up all data and listeners when logged out
         cleanupData();
