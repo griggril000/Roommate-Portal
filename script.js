@@ -567,6 +567,35 @@ function cleanupData() {
     chores = [];
     messages = [];
 
+    // Clear current user and household if logging out completely
+    if (!currentUser) {
+        currentHousehold = null;
+    }
+
+    // Force clear the UI elements directly to ensure no stale data
+    if (choreList) {
+        choreList.innerHTML = '';
+    }
+    if (messageList) {
+        messageList.innerHTML = '';
+    }
+
+    // Reset statistics to zero
+    if (activeChoresCount) activeChoresCount.textContent = '0';
+    if (completedTodayCount) completedTodayCount.textContent = '0';
+    if (newMessagesCount) newMessagesCount.textContent = '0';
+
+    // Clear form inputs
+    const choreInput = document.getElementById('choreInput');
+    const choreAssignee = document.getElementById('choreAssignee');
+    const chorePriority = document.getElementById('chorePriority');
+    const messageInput = document.getElementById('messageInput');
+
+    if (choreInput) choreInput.value = '';
+    if (choreAssignee) choreAssignee.value = '';
+    if (chorePriority) chorePriority.value = 'medium';
+    if (messageInput) messageInput.value = '';
+
     // Always update UI to show empty state, but don't hide main content
     loadChores();
     loadMessages();
@@ -980,6 +1009,14 @@ function deleteMessage(id) {
 
 // Statistics and UI Updates
 function updateStatistics() {
+    // Handle case when there's no data (logged out or no household)
+    if (!currentUser || !currentHousehold || chores.length === 0) {
+        if (activeChoresCount) activeChoresCount.textContent = '0';
+        if (completedTodayCount) completedTodayCount.textContent = '0';
+        if (newMessagesCount) newMessagesCount.textContent = messages.filter(m => m.isNew).length || '0';
+        return;
+    }
+
     const activeChores = chores.filter(c => !c.completed).length;
     const completedToday = chores.filter(c =>
         c.completed && c.completedDate === new Date().toLocaleDateString()
@@ -990,19 +1027,26 @@ function updateStatistics() {
     if (completedTodayCount) completedTodayCount.textContent = completedToday;
     if (newMessagesCount) newMessagesCount.textContent = newMessages;
 
-    // Mark messages as read after viewing
-    setTimeout(() => {
-        messages.forEach(m => m.isNew = false);
-        // Update in Firestore (batch update for efficiency)
-        const batch = db.batch();
-        messages.forEach(m => {
-            if (m.id) {
-                const messageRef = db.collection('messages').doc(m.id);
-                batch.update(messageRef, { isNew: false });
-            }
-        });
-        batch.commit().catch(error => console.error('Error updating message status:', error));
-    }, 5000);
+    // Mark messages as read after viewing (only if user is logged in and has household)
+    if (currentUser && currentHousehold && messages.length > 0) {
+        setTimeout(() => {
+            messages.forEach(m => m.isNew = false);
+            // Update in Firestore (batch update for efficiency)
+            const batch = db.batch();
+            messages.forEach(m => {
+                if (m.id) {
+                    const messageRef = db.collection('messages').doc(m.id);
+                    batch.update(messageRef, { isNew: false });
+                }
+            });
+            batch.commit().catch(error => {
+                // Only show error if user is still logged in
+                if (currentUser && currentHousehold) {
+                    console.error('Error updating message status:', error);
+                }
+            });
+        }, 5000);
+    }
 }
 
 // Utility Functions
@@ -1194,6 +1238,7 @@ function updateUIForAuth() {
 
         // Clean up data when no household
         cleanupData();
+        clearHouseholdHeader();
 
         // Household modal will be shown by checkUserHousehold()
     } else {
@@ -1217,6 +1262,55 @@ function updateUIForAuth() {
 
         // Clean up all data and listeners when logged out
         cleanupData();
+        clearHouseholdHeader();
+    }
+}
+
+function clearHouseholdHeader() {
+    // Clear header household name and code (desktop)
+    const headerInfo = document.querySelector('header .hidden.md\\:flex .flex.items-center.space-x-3 div:last-child');
+    if (headerInfo) {
+        headerInfo.innerHTML = `
+            <h1 class="text-2xl font-bold text-gray-800">
+                RoomieHub
+            </h1>
+            <p class="text-sm text-gray-600">
+                Your Roommate Portal
+            </p>
+        `;
+    }
+
+    // Clear mobile header title
+    const mobileHeaderInfo = document.querySelector('header .flex.flex-col .flex.items-center.space-x-3 div:last-child');
+    if (mobileHeaderInfo) {
+        mobileHeaderInfo.innerHTML = `
+            <h1 class="text-xl font-bold text-gray-800">
+                RoomieHub
+            </h1>
+            <p class="text-xs text-gray-600">
+                Roommate Portal
+            </p>
+        `;
+    }
+
+    // Clear household info section (desktop)
+    const householdInfo = document.getElementById('householdInfo');
+    if (householdInfo) {
+        householdInfo.innerHTML = `
+            <span class="text-gray-500 font-medium">
+                🏠 Not connected to a household
+            </span>
+        `;
+    }
+
+    // Clear household info section (mobile)
+    const householdInfoMobile = document.getElementById('householdInfoMobile');
+    if (householdInfoMobile) {
+        householdInfoMobile.innerHTML = `
+            <span class="text-gray-500 font-medium text-sm">
+                🏠 No household
+            </span>
+        `;
     }
 }
 
