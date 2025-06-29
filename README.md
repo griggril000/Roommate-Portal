@@ -65,9 +65,38 @@ A modern, household-based roommate management application built with Firebase an
 
 ## 🔧 Technical Details
 
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+### Architecture
+- **Frontend**: Vanilla JavaScript (Modular), HTML5, CSS3
 - **Styling**: Tailwind CSS
 - **Backend**: Firebase Firestore
+- **Authentication**: Firebase Auth (Google + Email/Password)
+- **Real-time Updates**: Firestore listeners
+
+### Code Structure
+The application uses a modular JavaScript architecture for better maintainability:
+
+```
+js/
+├── config.js              # Firebase configuration
+├── state.js               # Global state management  
+├── utils.js               # Utility functions
+├── auth.js                # Authentication management
+├── household.js           # Household operations
+├── chores.js              # Chore management
+├── messages.js            # Message board
+├── statistics.js          # Dashboard statistics
+├── ui.js                  # UI management
+├── dataCleanup.js         # Data cleanup operations
+├── householdManagement.js # Advanced household features
+├── main.js                # Application orchestration
+└── README.md              # Module documentation
+```
+
+### Key Benefits
+- **Modular Design**: Each module has a single responsibility
+- **Maintainable**: Easy to locate and modify specific features
+- **Testable**: Individual modules can be tested in isolation
+- **Scalable**: New features can be added as separate modules
 - **Authentication**: Firebase Auth
 - **Real-time**: Firebase real-time listeners
 - **Storage**: Client-side persistence with Firebase sync

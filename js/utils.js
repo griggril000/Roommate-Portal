@@ -1,0 +1,143 @@
+// Roommate Portal - Utility Functions Module
+// Handles common utility functions and helpers
+
+window.RoommatePortal = window.RoommatePortal || {};
+
+const utils = {
+    // Show notification to user
+    showNotification(message) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // Animate in
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+
+        // Remove after 4 seconds
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 4000);
+    },
+
+    // Generate avatar emoji based on name
+    getAvatarEmoji(name) {
+        if (!name) return '👤';
+
+        const emojis = ['👤', '🧑‍💼', '👩‍💼', '🧑‍🎓', '👩‍🎓', '🧑‍🔬', '👩‍🔬', '🧑‍🎨', '👩‍🎨', '🧑‍🍳', '👩‍🍳'];
+        const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        return emojis[hash % emojis.length];
+    },
+
+    // Generate unique household code
+    generateHouseholdCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    },
+
+    // Clear localStorage
+    clearLocalStorage() {
+        localStorage.removeItem('roommatePortal_chores');
+        localStorage.removeItem('roommatePortal_messages');
+    },
+
+    // Get user display name by UID
+    getUserDisplayName(uid) {
+        if (!uid) return 'Unknown User';
+
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+        if (!currentHousehold || !currentHousehold.memberDetails) return 'Unknown User';
+
+        const member = currentHousehold.memberDetails[uid];
+        return member ? member.displayName : 'Former Member';
+    },
+
+    // Update brand info in header
+    updateBrandInfo(title, subtitle) {
+        const brandInfo = document.getElementById('brandInfo');
+        if (!brandInfo) return;
+
+        const titleElement = brandInfo.querySelector('h1');
+        const subtitleElement = brandInfo.querySelector('p');
+
+        if (titleElement) titleElement.textContent = title;
+        if (subtitleElement) subtitleElement.textContent = subtitle;
+    },
+
+    // Update household status in header
+    updateHouseholdStatus(statusText, isConnected) {
+        // Update desktop household info
+        const householdInfo = document.getElementById('householdInfo');
+        if (householdInfo) {
+            const statusSpan = householdInfo.querySelector('span');
+            if (statusSpan) {
+                statusSpan.textContent = `🏠 ${statusText}`;
+                statusSpan.className = `font-medium ${isConnected ? 'text-green-700' : 'text-gray-500'}`;
+            }
+        }
+
+        // Update mobile household info
+        const householdInfoMobile = document.getElementById('householdInfoMobile');
+        if (householdInfoMobile) {
+            const statusSpan = householdInfoMobile.querySelector('span');
+            if (statusSpan) {
+                statusSpan.textContent = isConnected ? `🏠 ${statusText.split(' • ')[1] || statusText}` : '🏠 No household';
+                statusSpan.className = `font-medium text-sm ${isConnected ? 'text-green-700' : 'text-gray-500'}`;
+            }
+        }
+    },
+
+    // Update household header
+    updateHouseholdHeader() {
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+        if (currentHousehold) {
+            const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
+            const statusText = `${currentHousehold.name} • ${memberCount} member${memberCount !== 1 ? 's' : ''}`;
+            this.updateHouseholdStatus(statusText, true);
+        } else {
+            this.updateHouseholdStatus('No household', false);
+        }
+    },
+
+    // Clear household header
+    clearHouseholdHeader() {
+        this.updateBrandInfo('Roommate Portal', 'Your Shared Living Dashboard');
+        this.updateHouseholdStatus('Not connected to a household', false);
+    },
+
+    // Tab switching functionality
+    switchTab(tabName) {
+        const choresTab = document.getElementById('choresTab');
+        const messagesTab = document.getElementById('messagesTab');
+        const choreSection = document.getElementById('choreSection');
+        const messageSection = document.getElementById('messageSection');
+
+        if (tabName === 'chores') {
+            choresTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm";
+            messagesTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+            choreSection.className = "tab-content";
+            messageSection.className = "tab-content hidden";
+        } else {
+            messagesTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 bg-purple-600 text-white shadow-sm";
+            choresTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+            messageSection.className = "tab-content";
+            choreSection.className = "tab-content hidden";
+        }
+    }
+};
+
+// Export utils to global namespace
+window.RoommatePortal.utils = utils;
