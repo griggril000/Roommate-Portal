@@ -590,11 +590,15 @@ function cleanupData() {
     const choreAssignee = document.getElementById('choreAssignee');
     const chorePriority = document.getElementById('chorePriority');
     const messageInput = document.getElementById('messageInput');
+    const authorInput = document.getElementById('authorInput');
 
     if (choreInput) choreInput.value = '';
     if (choreAssignee) choreAssignee.value = '';
     if (chorePriority) chorePriority.value = 'medium';
     if (messageInput) messageInput.value = '';
+    if (authorInput) {
+        authorInput.value = '';
+    }
 
     // Always update UI to show empty state, but don't hide main content
     loadChores();
