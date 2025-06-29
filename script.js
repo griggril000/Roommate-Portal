@@ -672,9 +672,22 @@ function loadChoresFromFirestore() {
             updateStatistics();
         }, (error) => {
             console.error('Error loading chores:', error);
-            // Only show error notification if user is still logged in and has a household
-            if (currentUser && currentHousehold) {
-                showNotification('❌ Failed to load chores. Please try again later.');
+            // Handle case where chores collection doesn't exist yet (not an error)
+            if (error.code === 'permission-denied') {
+                // Permission denied - this is a real error
+                if (currentUser && currentHousehold) {
+                    showNotification('❌ Failed to load chores. Please check your permissions.');
+                }
+            } else if (error.code === 'not-found' || error.message.includes('collection')) {
+                // Collection doesn't exist yet - this is normal for new households
+                chores = [];
+                loadChores();
+                updateStatistics();
+            } else {
+                // Other errors
+                if (currentUser && currentHousehold) {
+                    showNotification('❌ Failed to load chores. Please try again later.');
+                }
             }
         });
 }
@@ -703,9 +716,17 @@ function loadMessagesFromFirestore() {
             updateStatistics(); // Update statistics when messages change
         }, (error) => {
             console.error('Error loading messages:', error);
-            // Only show error notification if user is still logged in and has a household
-            if (currentUser && currentHousehold) {
-                showNotification('❌ Failed to load messages. Please try again later.');
+            // Handle different types of errors appropriately
+            if (error.code === 'permission-denied') {
+                // Permission denied - this is a real error
+                if (currentUser && currentHousehold) {
+                    showNotification('❌ Failed to load messages. Please check your permissions.');
+                }
+            } else {
+                // Other errors
+                if (currentUser && currentHousehold) {
+                    showNotification('❌ Failed to load messages. Please try again later.');
+                }
             }
         });
 }
@@ -846,6 +867,9 @@ function loadChores() {
         choreElement.style.animationDelay = `${index * 0.1}s`;
 
         const priorityIcon = chore.priority === 'high' ? '🔴' : chore.priority === 'low' ? '🟢' : '🟡';
+        const isFormerMemberChore = chore.createdBy === 'former-member';
+        const creatorDisplay = isFormerMemberChore ?
+            `<span class="text-xs text-gray-500 italic">(Created by: ${chore.originalCreator || 'Former Member'})</span>` : '';
 
         choreElement.innerHTML = `
             <div class="flex items-start justify-between">
@@ -859,10 +883,12 @@ function loadChores() {
                                 ${priorityIcon} ${chore.text}
                             </span>
                             <span class="chore-assignee">${chore.assignee}</span>
+                            ${isFormerMemberChore ? '<span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">Legacy</span>' : ''}
                         </div>
                         <div class="chore-date">
                             📅 Added: ${chore.dateAdded}
                             ${chore.completed ? ` | ✅ Completed: ${chore.completedDate || new Date().toLocaleDateString()}` : ''}
+                            ${creatorDisplay}
                         </div>
                     </div>
                 </div>
@@ -1270,8 +1296,16 @@ function updateUIForAuth() {
         // Show sign-in buttons and hide sign-out buttons
         updateAuthButtons(false, false);
 
-        // Hide login modal when logged out (only show when sign-in button is clicked)
+        // Hide all modals when logged out
         hideLoginModal();
+        hideHouseholdModal();
+
+        // Close any household management modal
+        const householdMgmtModal = document.getElementById('householdManagementModal');
+        if (householdMgmtModal) {
+            householdMgmtModal.remove();
+            document.body.style.overflow = '';
+        }
 
         // Clean up all data and listeners when logged out
         cleanupData();
@@ -1356,19 +1390,21 @@ async function leaveHousehold() {
     const isAdmin = currentHousehold.memberDetails[currentUser.uid]?.role === 'admin';
     const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
 
-    let confirmMessage = 'Are you sure you want to leave this household? This will delete all your chores and messages in this household.';
+    let confirmMessage = 'Are you sure you want to leave this household? This will unassign chores assigned to you and delete your messages, but preserve all chores for household history.';
     if (isAdmin && memberCount > 1) {
-        confirmMessage = 'You are the admin of this household. Leaving will transfer admin rights to another member and delete all your data. Are you sure?';
+        confirmMessage = 'You are the admin of this household. Leaving will transfer admin rights to another member, unassign your chores, and delete your messages. All chores will be preserved. Are you sure?';
     } else if (isAdmin && memberCount === 1) {
-        confirmMessage = 'You are the only member of this household. Leaving will delete the household and ALL data permanently. Are you sure?';
+        confirmMessage = 'You are the only member of this household. Leaving will delete the household and ALL data permanently (including all chores and messages). Are you sure?';
     }
 
     if (confirm(confirmMessage)) {
         try {
-            // Delete user's data from the household
-            await deleteUserDataFromHousehold(currentUser.uid, currentHousehold.id);
+            const isLastMember = memberCount === 1;
 
-            if (memberCount === 1) {
+            // Delete user's data from the household
+            await deleteUserDataFromHousehold(currentUser.uid, currentHousehold.id, isLastMember);
+
+            if (isLastMember) {
                 // Delete the household entirely (including all remaining data)
                 await deleteEntireHousehold(currentHousehold.id);
                 showNotification('🏠 Household and all data deleted successfully.');
@@ -1389,7 +1425,7 @@ async function leaveHousehold() {
                     }
                 }
 
-                showNotification('👋 You have left the household and your data has been deleted.');
+                showNotification('👋 You have left the household. Your chores have been unassigned and marked as created by "Former Member", and your messages have been deleted.');
             }
 
             // Remove household reference from user
@@ -1417,50 +1453,112 @@ async function leaveHousehold() {
 }
 
 // Data cleanup functions
-async function deleteUserDataFromHousehold(userId, householdId) {
+async function deleteUserDataFromHousehold(userId, householdId, isLastMember = false) {
     try {
-        const batch = db.batch();
+        if (isLastMember) {
+            // If this is the last member, delete all chores in the household
+            const deleteBatch = db.batch();
 
-        // Delete all chores created by this user
-        const userChoresQuery = await db.collection('chores')
-            .where('householdId', '==', householdId)
-            .where('createdBy', '==', userId)
-            .get();
+            const allChoresQuery = await db.collection('chores')
+                .where('householdId', '==', householdId)
+                .get();
 
-        userChoresQuery.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
+            allChoresQuery.docs.forEach(doc => {
+                deleteBatch.delete(doc.ref);
+            });
 
-        // Delete all messages posted by this user
-        const userMessagesQuery = await db.collection('messages')
-            .where('householdId', '==', householdId)
-            .where('authorId', '==', userId)
-            .get();
+            // Delete all messages in the household
+            const userMessagesQuery = await db.collection('messages')
+                .where('householdId', '==', householdId)
+                .get();
 
-        userMessagesQuery.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
+            userMessagesQuery.docs.forEach(doc => {
+                deleteBatch.delete(doc.ref);
+            });
 
-        // Remove user from readBy arrays in remaining messages
-        const allMessagesQuery = await db.collection('messages')
-            .where('householdId', '==', householdId)
-            .get();
+            // Commit all deletions for last member
+            await deleteBatch.commit();
+        } else {
+            // Get user's display name for operations
+            const userDetails = currentHousehold.memberDetails[userId];
+            const userDisplayName = userDetails ? userDetails.displayName : 'Unknown User';
 
-        allMessagesQuery.docs.forEach(doc => {
-            const messageData = doc.data();
-            if (messageData.readBy && messageData.readBy.includes(userId)) {
-                batch.update(doc.ref, {
-                    readBy: firebase.firestore.FieldValue.arrayRemove(userId)
+            // First batch: Handle updates only (no deletions)
+            const updateBatch = db.batch();
+
+            // Unassign chores assigned to this user (set to "Unassigned")
+            const userAssignedChoresQuery = await db.collection('chores')
+                .where('householdId', '==', householdId)
+                .where('assignee', '==', userDisplayName)
+                .get();
+
+            userAssignedChoresQuery.docs.forEach(doc => {
+                updateBatch.update(doc.ref, {
+                    assignee: 'Unassigned'
                 });
-            }
-        });
+            });
 
-        // Commit all deletions and updates
-        await batch.commit();
-        console.log(`Deleted all data for user ${userId} from household ${householdId}`);
+            // Update ALL chores created by this user to mark as "former-member" (preserve all chores)
+            const userCreatedChoresQuery = await db.collection('chores')
+                .where('householdId', '==', householdId)
+                .where('createdBy', '==', userId)
+                .get();
+
+            userCreatedChoresQuery.docs.forEach(doc => {
+                // Keep ALL chores (completed and incomplete) but mark as created by "Former Member"
+                updateBatch.update(doc.ref, {
+                    createdBy: 'former-member',
+                    originalCreator: userDisplayName
+                });
+            });
+
+            // Remove user from readBy arrays in remaining messages
+            const allMessagesQuery = await db.collection('messages')
+                .where('householdId', '==', householdId)
+                .get();
+
+            allMessagesQuery.docs.forEach(doc => {
+                const messageData = doc.data();
+                if (messageData.readBy && messageData.readBy.includes(userId)) {
+                    updateBatch.update(doc.ref, {
+                        readBy: firebase.firestore.FieldValue.arrayRemove(userId)
+                    });
+                }
+            });
+
+            // Commit all updates first
+            await updateBatch.commit();
+
+            // Second batch: Handle deletions only
+            const deleteBatch = db.batch();
+
+            // Delete all messages posted by this user
+            const userMessagesQuery = await db.collection('messages')
+                .where('householdId', '==', householdId)
+                .where('authorId', '==', userId)
+                .get();
+
+            userMessagesQuery.docs.forEach(doc => {
+                deleteBatch.delete(doc.ref);
+            });
+
+            // Commit all deletions
+            await deleteBatch.commit();
+        }
+
+        console.log(`Cleaned up data for user ${userId} from household ${householdId}${isLastMember ? ' (last member)' : ''}`);
     } catch (error) {
-        console.error('Error deleting user data from household:', error);
-        throw error;
+        console.error('Error cleaning up user data from household:', error);
+
+        // Provide more specific error information
+        if (error.code === 'permission-denied') {
+            throw new Error('Permission denied: Unable to delete user data from household. Check Firestore security rules.');
+        } else if (error.code === 'not-found') {
+            console.warn('Some data was not found (may have been already deleted)');
+            // This is not necessarily an error, continue
+        } else {
+            throw new Error(`Failed to clean up user data: ${error.message || error.code || 'Unknown error'}`);
+        }
     }
 }
 
@@ -1494,7 +1592,13 @@ async function deleteEntireHousehold(householdId) {
         console.log(`Deleted entire household ${householdId} and all associated data`);
     } catch (error) {
         console.error('Error deleting entire household:', error);
-        throw error;
+
+        // Provide more specific error information
+        if (error.code === 'permission-denied') {
+            throw new Error('Permission denied: Unable to delete household data. Check Firestore security rules.');
+        } else {
+            throw new Error(`Failed to delete household: ${error.message || error.code || 'Unknown error'}`);
+        }
     }
 }
 
@@ -1506,43 +1610,63 @@ async function deleteUserAccount() {
 
     const confirmMessage = 'Are you sure you want to delete your account? This will:\n\n' +
         '• Remove you from your current household\n' +
-        '• Delete all your chores and messages\n' +
+        '• Unassign chores assigned to you (chores will be preserved)\n' +
+        '• Mark chores you created as "Former Member"\n' +
+        '• Delete your messages\n' +
         '• Permanently delete your account\n\n' +
         'This action cannot be undone!';
 
     if (confirm(confirmMessage)) {
+        let householdDataDeleted = false;
+        let userRemovedFromHousehold = false;
+
         try {
             // If user is part of a household, clean up their data first
             if (currentHousehold) {
-                await deleteUserDataFromHousehold(currentUser.uid, currentHousehold.id);
+                try {
+                    // Check if user was the only member
+                    const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
+                    const isLastMember = memberCount === 1;
 
-                // Check if user was the only member
-                const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
-                if (memberCount === 1) {
-                    // Delete the entire household
-                    await deleteEntireHousehold(currentHousehold.id);
-                } else {
-                    // Remove user from household
-                    await db.collection('households').doc(currentHousehold.id).update({
-                        members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
-                        [`memberDetails.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
-                    });
+                    await deleteUserDataFromHousehold(currentUser.uid, currentHousehold.id, isLastMember);
+                    householdDataDeleted = true;
 
-                    // If user was admin, transfer admin to first remaining member
-                    const isAdmin = currentHousehold.memberDetails[currentUser.uid]?.role === 'admin';
-                    if (isAdmin) {
-                        const remainingMembers = Object.keys(currentHousehold.memberDetails).filter(uid => uid !== currentUser.uid);
-                        if (remainingMembers.length > 0) {
-                            await db.collection('households').doc(currentHousehold.id).update({
-                                [`memberDetails.${remainingMembers[0]}.role`]: 'admin'
-                            });
+                    if (isLastMember) {
+                        // Delete the entire household since user was the only member
+                        await deleteEntireHousehold(currentHousehold.id);
+                    } else {
+                        // Remove user from household
+                        await db.collection('households').doc(currentHousehold.id).update({
+                            members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
+                            [`memberDetails.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
+                        });
+                        userRemovedFromHousehold = true;
+
+                        // If user was admin, transfer admin to first remaining member
+                        const isAdmin = currentHousehold.memberDetails[currentUser.uid]?.role === 'admin';
+                        if (isAdmin) {
+                            const remainingMembers = Object.keys(currentHousehold.memberDetails).filter(uid => uid !== currentUser.uid);
+                            if (remainingMembers.length > 0) {
+                                await db.collection('households').doc(currentHousehold.id).update({
+                                    [`memberDetails.${remainingMembers[0]}.role`]: 'admin'
+                                });
+                            }
                         }
                     }
+                } catch (householdError) {
+                    console.error('Error cleaning up household data:', householdError);
+                    // Continue with account deletion even if household cleanup fails
+                    showNotification('⚠️ Warning: Could not fully clean up household data, but proceeding with account deletion.');
                 }
             }
 
             // Delete user document from Firestore
-            await db.collection('users').doc(currentUser.uid).delete();
+            try {
+                await db.collection('users').doc(currentUser.uid).delete();
+            } catch (userDocError) {
+                console.error('Error deleting user document:', userDocError);
+                // Continue with auth user deletion even if user document deletion fails
+            }
 
             // Delete the Firebase Auth user account
             await currentUser.delete();
@@ -1550,19 +1674,63 @@ async function deleteUserAccount() {
             // Clear local state
             currentUser = null;
             currentHousehold = null;
+
+            // Close the management modal
+            const modal = document.getElementById('householdManagementModal');
+            if (modal) {
+                modal.remove();
+                document.body.style.overflow = '';
+            }
+
+            // Clean up data and update UI
             cleanupData();
             clearLocalStorage();
             updateUIForAuth();
-            clearLocalStorage();
 
-            showNotification('✅ Your account has been deleted successfully.');
+            // Show success message based on what was actually deleted
+            if (householdDataDeleted) {
+                showNotification('✅ Your account and all associated data have been deleted successfully.');
+            } else {
+                showNotification('✅ Your account has been deleted (some household data may remain).');
+            }
 
         } catch (error) {
             console.error('Error deleting user account:', error);
+
+            // Handle different types of errors with specific messages
             if (error.code === 'auth/requires-recent-login') {
-                showNotification('❌ Please sign in again to delete your account (for security).');
+                showNotification('❌ Please sign out and sign back in to delete your account (for security).');
+            } else if (error.code === 'permission-denied') {
+                showNotification('❌ Permission denied. Unable to delete account data. Please contact support.');
+            } else if (error.code === 'not-found') {
+                // Some data might already be deleted, continue with auth deletion
+                try {
+                    await currentUser.delete();
+                    currentUser = null;
+                    currentHousehold = null;
+                    cleanupData();
+                    clearLocalStorage();
+                    updateUIForAuth();
+                    showNotification('✅ Account deleted (some data was already removed).');
+                } catch (authError) {
+                    console.error('Error deleting auth user:', authError);
+                    showNotification('❌ Failed to completely delete account. Please try again.');
+                }
+            } else if (error.message && error.message.includes('Missing or insufficient permissions')) {
+                showNotification('❌ Insufficient permissions to delete account data. This may be due to Firestore security rules. Please contact support or try leaving the household first.');
+            } else if (error.message && error.message.includes('chores')) {
+                showNotification('❌ Unable to delete chore data due to permission restrictions. Please try leaving the household first, then delete your account.');
+            } else if (error.message && error.message.includes('messages')) {
+                showNotification('❌ Unable to delete message data due to permission restrictions. Please try leaving the household first, then delete your account.');
             } else {
-                showNotification('❌ Failed to delete account. Please try again.');
+                showNotification(`❌ Failed to delete account: ${error.message || 'Unknown error'}. Please try again.`);
+            }
+
+            // Close the management modal on any error
+            const modal = document.getElementById('householdManagementModal');
+            if (modal) {
+                modal.remove();
+                document.body.style.overflow = '';
             }
         }
     }
