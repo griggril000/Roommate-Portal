@@ -27,11 +27,15 @@
                     </div>
                 </div>
                 <div class="hidden md:flex items-center space-x-4">
-                    <div class="bg-green-50 border border-green-200 px-4 py-2 rounded-lg">
+                    <div id="householdInfo" class="bg-green-50 border border-green-200 px-4 py-2 rounded-lg">
                         <span class="text-green-700 font-medium">🟢 All roommates active</span>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <button id="householdManagementBtn"
+                        class="hidden px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+                        <i class="fas fa-cog mr-2"></i>Household
+                    </button>
                     <button id="signInButton"
                         class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
                         <i class="fas fa-sign-in-alt mr-2"></i>Sign In
@@ -195,6 +199,8 @@
             </button>
         </div>
     </div>
+
+    <!-- Household Modal (will be dynamically created) -->
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>

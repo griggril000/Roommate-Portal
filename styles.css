@@ -318,3 +318,23 @@ body {
     font-size: 0.875rem;
     opacity: 0.8;
 }
+
+/* Household Modal Styles */
+#householdModal {
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+}
+
+#householdModal .bg-white {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#householdModal button {
+    transition: all 0.2s ease-in-out;
+}
+
+#householdModal button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}

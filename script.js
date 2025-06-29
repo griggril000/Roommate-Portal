@@ -1,4 +1,12 @@
 // RoomieHub - Enhanced Roommate Portal
+// 
+// HOUSEHOLD MANAGEMENT FEATURES:
+// 1. After login, users must create or join a household
+// 2. Household members have full CRUD access to household chores
+// 3. Household members have full CRUD access to their own messages
+// 4. Users cannot delete other members' messages
+// 5. Household admin can manage household settings
+// 6. Users can leave households (with proper admin transfer)
 
 // Firebase configuration
 const firebaseConfig = {
@@ -28,6 +36,10 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
 let chores = JSON.parse(localStorage.getItem('roomieHub_chores')) || [];
 let messages = JSON.parse(localStorage.getItem('roomieHub_messages')) || [];
 
+// Household management
+let currentHousehold = null;
+let userHouseholds = [];
+
 // DOM elements
 const choreInput = document.getElementById('choreInput');
 const choreAssignee = document.getElementById('choreAssignee');
@@ -46,6 +58,7 @@ const newMessagesCount = document.getElementById('newMessagesCount');
 // Firebase Authentication
 const signInButton = document.getElementById('signInButton');
 const signOutButton = document.getElementById('signOutButton');
+const householdManagementBtn = document.getElementById('householdManagementBtn');
 let currentUser = null;
 
 // Declare variables at the top of the script to avoid redeclaration
@@ -201,34 +214,344 @@ function initializeApp() {
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
-        updateUIForAuth();
+        checkUserHousehold();
     } else {
         currentUser = null;
+        currentHousehold = null;
         updateUIForAuth();
     }
 });
 
-// Load chores from Firestore
-function loadChoresFromFirestore() {
-    db.collection('chores').onSnapshot((snapshot) => {
-        chores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        loadChores();
-        updateStatistics();
-    }, (error) => {
-        console.error('Error loading chores:', error);
-        showNotification('❌ Failed to load chores. Please try again later.');
+// Household Management Functions
+async function checkUserHousehold() {
+    try {
+        // Check if user is member of any household
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+
+        if (userDoc.exists && userDoc.data().householdId) {
+            const householdId = userDoc.data().householdId;
+            const householdDoc = await db.collection('households').doc(householdId).get();
+
+            if (householdDoc.exists) {
+                currentHousehold = { id: householdDoc.id, ...householdDoc.data() };
+                updateUIForAuth();
+                loadHouseholdData();
+            } else {
+                // Household doesn't exist, clear user's household reference
+                await db.collection('users').doc(currentUser.uid).update({
+                    householdId: firebase.firestore.FieldValue.delete()
+                });
+                showHouseholdModal();
+            }
+        } else {
+            // User is not part of any household
+            showHouseholdModal();
+        }
+    } catch (error) {
+        console.error('Error checking user household:', error);
+        showHouseholdModal();
+    }
+}
+
+function showHouseholdModal() {
+    const householdModal = document.getElementById('householdModal');
+    if (!householdModal) {
+        createHouseholdModal();
+    }
+
+    const modal = document.getElementById('householdModal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    document.body.style.pointerEvents = 'none';
+    modal.style.pointerEvents = 'auto';
+}
+
+function hideHouseholdModal() {
+    const householdModal = document.getElementById('householdModal');
+    if (householdModal) {
+        householdModal.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.body.style.pointerEvents = '';
+    }
+}
+
+function createHouseholdModal() {
+    const modalHTML = `
+        <div id="householdModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-md mx-4">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">🏠 Household Setup</h2>
+                <p class="text-gray-600 mb-6">You need to create or join a household to continue.</p>
+                
+                <div class="space-y-4">
+                    <button id="createHouseholdBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Create New Household
+                    </button>
+                    <button id="joinHouseholdBtn" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+                        <i class="fas fa-users mr-2"></i>Join Existing Household
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Add event listeners
+    document.getElementById('createHouseholdBtn').addEventListener('click', showCreateHouseholdForm);
+    document.getElementById('joinHouseholdBtn').addEventListener('click', showJoinHouseholdForm);
+}
+
+function showCreateHouseholdForm() {
+    const modal = document.getElementById('householdModal');
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-md mx-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">🏠 Create Household</h2>
+            <form id="createHouseholdForm" class="space-y-4">
+                <input type="text" id="householdNameInput" class="w-full px-4 py-3 border rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Household Name" required>
+                <textarea id="householdDescInput" class="w-full px-4 py-3 border rounded-lg focus:border-blue-500 focus:outline-none resize-none" rows="3" placeholder="Description (optional)"></textarea>
+                <div class="flex space-x-3">
+                    <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        Create
+                    </button>
+                    <button type="button" id="backToHouseholdOptions" class="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
+                        Back
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.getElementById('createHouseholdForm').addEventListener('submit', handleCreateHousehold);
+    document.getElementById('backToHouseholdOptions').addEventListener('click', () => {
+        modal.remove();
+        createHouseholdModal();
+        showHouseholdModal();
     });
 }
 
-// Load messages from Firestore
-function loadMessagesFromFirestore() {
-    db.collection('messages').onSnapshot((snapshot) => {
-        messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        loadMessages();
-    }, (error) => {
-        console.error('Error loading messages:', error);
-        showNotification('❌ Failed to load messages. Please try again later.');
+function showJoinHouseholdForm() {
+    const modal = document.getElementById('householdModal');
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-md mx-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">🏠 Join Household</h2>
+            <form id="joinHouseholdForm" class="space-y-4">
+                <input type="text" id="householdCodeInput" class="w-full px-4 py-3 border rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Household Code" required>
+                <div class="flex space-x-3">
+                    <button type="submit" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+                        Join
+                    </button>
+                    <button type="button" id="backToHouseholdOptionsJoin" class="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
+                        Back
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.getElementById('joinHouseholdForm').addEventListener('submit', handleJoinHousehold);
+    document.getElementById('backToHouseholdOptionsJoin').addEventListener('click', () => {
+        modal.remove();
+        createHouseholdModal();
+        showHouseholdModal();
     });
+}
+
+async function handleCreateHousehold(e) {
+    e.preventDefault();
+    const householdName = document.getElementById('householdNameInput').value.trim();
+    const householdDesc = document.getElementById('householdDescInput').value.trim();
+
+    if (!householdName) return;
+
+    try {
+        // Generate a unique household code
+        const householdCode = generateHouseholdCode();
+
+        // Create household document
+        const householdData = {
+            name: householdName,
+            description: householdDesc || '',
+            code: householdCode,
+            createdBy: currentUser.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            members: [currentUser.uid],
+            memberDetails: {
+                [currentUser.uid]: {
+                    displayName: currentUser.displayName || currentUser.email,
+                    email: currentUser.email,
+                    joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    role: 'admin'
+                }
+            }
+        };
+
+        const householdRef = await db.collection('households').add(householdData);
+
+        // Update user document with household reference
+        await db.collection('users').doc(currentUser.uid).set({
+            householdId: householdRef.id,
+            email: currentUser.email,
+            displayName: currentUser.displayName || currentUser.email
+        }, { merge: true });
+
+        currentHousehold = { id: householdRef.id, ...householdData };
+        hideHouseholdModal();
+        updateUIForAuth();
+        loadHouseholdData();
+
+        showNotification(`🎉 Household "${householdName}" created! Code: ${householdCode}`);
+    } catch (error) {
+        console.error('Error creating household:', error);
+        showNotification('❌ Failed to create household. Please try again.');
+    }
+}
+
+async function handleJoinHousehold(e) {
+    e.preventDefault();
+    const householdCode = document.getElementById('householdCodeInput').value.trim().toUpperCase();
+
+    if (!householdCode) return;
+
+    try {
+        // Find household by code
+        const householdQuery = await db.collection('households')
+            .where('code', '==', householdCode)
+            .limit(1)
+            .get();
+
+        if (householdQuery.empty) {
+            showNotification('❌ Invalid household code. Please check and try again.');
+            return;
+        }
+
+        const householdDoc = householdQuery.docs[0];
+        const householdData = householdDoc.data();
+
+        // Check if user is already a member
+        if (householdData.members && householdData.members.includes(currentUser.uid)) {
+            showNotification('ℹ️ You are already a member of this household.');
+            currentHousehold = { id: householdDoc.id, ...householdData };
+            hideHouseholdModal();
+            updateUIForAuth();
+            loadHouseholdData();
+            return;
+        }
+
+        // Add user to household
+        await db.collection('households').doc(householdDoc.id).update({
+            members: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+            [`memberDetails.${currentUser.uid}`]: {
+                displayName: currentUser.displayName || currentUser.email,
+                email: currentUser.email,
+                joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                role: 'member'
+            }
+        });
+
+        // Update user document
+        await db.collection('users').doc(currentUser.uid).set({
+            householdId: householdDoc.id,
+            email: currentUser.email,
+            displayName: currentUser.displayName || currentUser.email
+        }, { merge: true });
+
+        currentHousehold = { id: householdDoc.id, ...householdData };
+        hideHouseholdModal();
+        updateUIForAuth();
+        loadHouseholdData();
+
+        showNotification(`🎉 Successfully joined household "${householdData.name}"!`);
+    } catch (error) {
+        console.error('Error joining household:', error);
+        showNotification('❌ Failed to join household. Please try again.');
+    }
+}
+
+function generateHouseholdCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+function loadHouseholdData() {
+    if (currentHousehold) {
+        loadChoresFromFirestore();
+        loadMessagesFromFirestore();
+        updateHouseholdMembers();
+    }
+}
+
+// Load chores from Firestore (updated for household)
+function loadChoresFromFirestore() {
+    if (!currentHousehold) return;
+
+    db.collection('chores')
+        .where('householdId', '==', currentHousehold.id)
+        .onSnapshot((snapshot) => {
+            chores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            loadChores();
+            updateStatistics();
+        }, (error) => {
+            console.error('Error loading chores:', error);
+            showNotification('❌ Failed to load chores. Please try again later.');
+        });
+}
+
+// Load messages from Firestore (updated for household)
+function loadMessagesFromFirestore() {
+    if (!currentHousehold) return;
+
+    db.collection('messages')
+        .where('householdId', '==', currentHousehold.id)
+        .onSnapshot((snapshot) => {
+            messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Sort messages in JavaScript instead of Firestore to avoid index issues
+            messages.sort((a, b) => {
+                const aTime = a.timestamp ? a.timestamp.seconds : 0;
+                const bTime = b.timestamp ? b.timestamp.seconds : 0;
+                return bTime - aTime; // Most recent first
+            });
+            loadMessages();
+        }, (error) => {
+            console.error('Error loading messages:', error);
+            showNotification('❌ Failed to load messages. Please try again later.');
+        });
+}
+
+function updateHouseholdMembers() {
+    if (!currentHousehold || !currentHousehold.memberDetails) return;
+
+    // Update assignee dropdown with household members
+    const choreAssignee = document.getElementById('choreAssignee');
+    if (choreAssignee) {
+        choreAssignee.innerHTML = '<option value="">Assign to...</option>';
+
+        Object.values(currentHousehold.memberDetails).forEach(member => {
+            const option = document.createElement('option');
+            option.value = member.displayName;
+            option.textContent = member.displayName;
+            choreAssignee.appendChild(option);
+        });
+
+        // Add "Everyone" option
+        const everyoneOption = document.createElement('option');
+        everyoneOption.value = 'Everyone';
+        everyoneOption.textContent = 'Everyone';
+        choreAssignee.appendChild(everyoneOption);
+    }
+
+    // Update author input with current user's name
+    const authorInput = document.getElementById('authorInput');
+    if (authorInput && currentUser) {
+        const userDetails = currentHousehold.memberDetails[currentUser.uid];
+        if (userDetails) {
+            authorInput.value = userDetails.displayName;
+            authorInput.readOnly = true;
+        }
+    }
 }
 
 // Tab switching functionality
@@ -252,34 +575,45 @@ function switchTab(tabName) {
 }
 
 // Chore Management Functions
-addChoreForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    const choreText = choreInput.value.trim();
-    const assignee = choreAssignee.value;
+if (addChoreForm) {
+    addChoreForm.addEventListener('submit', function (e) {
+        e.preventDefault();
 
-    if (choreText) {
-        const chore = {
-            id: Date.now(),
-            text: choreText,
-            assignee: assignee || 'Unassigned',
-            completed: false,
-            dateAdded: new Date().toLocaleDateString(),
-            priority: 'medium'
-        };
+        if (!currentHousehold) {
+            showNotification('❌ You must be part of a household to add chores.');
+            return;
+        }
 
-        chores.push(chore);
-        saveChores();
-        loadChores();
-        updateStatistics();
+        const choreText = choreInput.value.trim();
+        const assignee = choreAssignee.value;
 
-        // Clear form
-        choreInput.value = '';
-        choreAssignee.value = '';
+        if (choreText) {
+            const chore = {
+                text: choreText,
+                assignee: assignee || 'Unassigned',
+                completed: false,
+                dateAdded: new Date().toLocaleDateString(),
+                priority: 'medium',
+                householdId: currentHousehold.id,
+                createdBy: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
 
-        // Show success feedback
-        showNotification('✅ Chore added successfully!');
-    }
-});
+            // Add to Firestore
+            db.collection('chores').add(chore)
+                .then(() => {
+                    // Clear form
+                    choreInput.value = '';
+                    choreAssignee.value = '';
+                    showNotification('✅ Chore added successfully!');
+                })
+                .catch(error => {
+                    console.error('Error adding chore:', error);
+                    showNotification('❌ Failed to add chore. Please try again.');
+                });
+        }
+    });
+}
 
 function loadChores() {
     choreList.innerHTML = '';
@@ -314,7 +648,7 @@ function loadChores() {
             <div class="flex items-start justify-between">
                 <div class="flex items-start space-x-4 flex-1">
                     <input type="checkbox" ${chore.completed ? 'checked' : ''} 
-                           onchange="toggleChore(${chore.id})" 
+                           onchange="toggleChore('${chore.id}')" 
                            class="custom-checkbox mt-1">
                     <div class="flex-1">
                         <div class="flex items-center space-x-2">
@@ -325,15 +659,15 @@ function loadChores() {
                         </div>
                         <div class="chore-date">
                             📅 Added: ${chore.dateAdded}
-                            ${chore.completed ? ` | ✅ Completed: ${new Date().toLocaleDateString()}` : ''}
+                            ${chore.completed ? ` | ✅ Completed: ${chore.completedDate || new Date().toLocaleDateString()}` : ''}
                         </div>
                     </div>
                 </div>
                 <div class="flex space-x-2 ml-4">
-                    ${!chore.completed ? `<button onclick="markComplete(${chore.id})" class="btn-complete">
+                    ${!chore.completed ? `<button onclick="markComplete('${chore.id}')" class="btn-complete">
                         <i class="fas fa-check mr-1"></i>Complete
                     </button>` : ''}
-                    <button onclick="deleteChore(${chore.id})" class="btn-delete">
+                    <button onclick="deleteChore('${chore.id}')" class="btn-delete">
                         <i class="fas fa-trash mr-1"></i>Delete
                     </button>
                 </div>
@@ -354,9 +688,15 @@ function toggleChore(id) {
         } else {
             delete chore.completedDate;
         }
-        saveChores();
-        loadChores();
-        updateStatistics();
+
+        // Update in Firestore
+        db.collection('chores').doc(id).update({
+            completed: chore.completed,
+            completedDate: chore.completedDate || firebase.firestore.FieldValue.delete()
+        }).catch(error => {
+            console.error('Error updating chore:', error);
+            showNotification('❌ Failed to update chore. Please try again.');
+        });
     }
 }
 
@@ -365,70 +705,70 @@ function markComplete(id) {
     if (chore) {
         chore.completed = true;
         chore.completedDate = new Date().toLocaleDateString();
-        saveChores();
-        loadChores();
-        updateStatistics();
-        showNotification('🎉 Awesome! Chore marked as complete!');
+
+        // Update in Firestore
+        db.collection('chores').doc(id).update({
+            completed: true,
+            completedDate: chore.completedDate
+        }).then(() => {
+            showNotification('🎉 Awesome! Chore marked as complete!');
+        }).catch(error => {
+            console.error('Error updating chore:', error);
+            showNotification('❌ Failed to update chore. Please try again.');
+        });
     }
 }
 
 function deleteChore(id) {
     if (confirm('Are you sure you want to delete this chore?')) {
-        db.collection('chores').doc(id.toString()).delete()
+        db.collection('chores').doc(id).delete()
             .then(() => {
-                chores = chores.filter(c => c.id !== id);
-                loadChores();
-                updateStatistics();
                 showNotification('🗑️ Chore deleted');
             })
             .catch(error => {
                 console.error('Error deleting chore:', error);
-                showNotification('❌ Failed to delete chore. Please try again later.');
+                showNotification('❌ Failed to delete chore. Please try again.');
             });
     }
 }
 
-function saveChores() {
-    chores.forEach(chore => {
-        if (chore.id) {
-            // Update existing chore
-            db.collection('chores').doc(chore.id.toString()).set(chore)
-                .catch(error => console.error('Error updating chore:', error));
-        } else {
-            // Add new chore
-            db.collection('chores').add(chore)
-                .then(docRef => chore.id = docRef.id)
-                .catch(error => console.error('Error adding chore:', error));
+// Message Board Functions
+if (postMessageForm) {
+    postMessageForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        if (!currentHousehold) {
+            showNotification('❌ You must be part of a household to post messages.');
+            return;
+        }
+
+        const author = authorInput.value.trim();
+        const messageText = messageInput.value.trim();
+
+        if (author && messageText) {
+            const message = {
+                author: author,
+                text: messageText,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                householdId: currentHousehold.id,
+                authorId: currentUser.uid,
+                isNew: true
+            };
+
+            // Add to Firestore
+            db.collection('messages').add(message)
+                .then(() => {
+                    // Clear message input but keep author name
+                    messageInput.value = '';
+                    showNotification('📝 Message posted successfully!');
+                })
+                .catch(error => {
+                    console.error('Error posting message:', error);
+                    showNotification('❌ Failed to post message. Please try again.');
+                });
         }
     });
 }
-
-// Message Board Functions
-postMessageForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    const author = authorInput.value.trim();
-    const messageText = messageInput.value.trim();
-
-    if (author && messageText) {
-        const message = {
-            id: Date.now(),
-            author: author,
-            text: messageText,
-            timestamp: new Date().toLocaleString(),
-            isNew: true
-        };
-
-        messages.unshift(message); // Add to beginning for newest first
-        saveMessages();
-        loadMessages();
-        updateStatistics();
-
-        // Clear message input but keep author name
-        messageInput.value = '';
-
-        showNotification('📝 Message posted successfully!');
-    }
-});
 
 function loadMessages() {
     messageList.innerHTML = '';
@@ -450,6 +790,7 @@ function loadMessages() {
         messageElement.style.animationDelay = `${index * 0.1}s`;
 
         const avatarEmoji = getAvatarEmoji(message.author);
+        const isOwnMessage = message.authorId === currentUser.uid;
 
         messageElement.innerHTML = `
             <div class="flex justify-between items-start mb-3">
@@ -459,10 +800,10 @@ function loadMessages() {
                     ${message.isNew ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">NEW</span>' : ''}
                 </div>
                 <div class="flex items-center space-x-3">
-                    <span class="message-timestamp">${message.timestamp}</span>
-                    <button onclick="deleteMessage(${message.id})" class="text-red-500 hover:text-red-700 transition-colors">
+                    <span class="message-timestamp">${message.timestamp ? new Date(message.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span>
+                    ${isOwnMessage ? `<button onclick="deleteMessage('${message.id}')" class="text-red-500 hover:text-red-700 transition-colors">
                         <i class="fas fa-times"></i>
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
             <p class="message-text">${message.text}</p>
@@ -472,33 +813,23 @@ function loadMessages() {
     });
 }
 
-function saveMessages() {
-    messages.forEach(message => {
-        if (message.id) {
-            // Update existing message
-            db.collection('messages').doc(message.id.toString()).set(message)
-                .catch(error => console.error('Error updating message:', error));
-        } else {
-            // Add new message
-            db.collection('messages').add(message)
-                .then(docRef => message.id = docRef.id)
-                .catch(error => console.error('Error adding message:', error));
-        }
-    });
-}
-
 function deleteMessage(id) {
+    const message = messages.find(m => m.id === id);
+
+    // Check if user can delete this message (only their own messages)
+    if (!message || message.authorId !== currentUser.uid) {
+        showNotification('❌ You can only delete your own messages.');
+        return;
+    }
+
     if (confirm('Are you sure you want to delete this message?')) {
-        db.collection('messages').doc(id.toString()).delete()
+        db.collection('messages').doc(id).delete()
             .then(() => {
-                messages = messages.filter(m => m.id !== id);
-                loadMessages();
-                updateStatistics();
                 showNotification('🗑️ Message deleted');
             })
             .catch(error => {
                 console.error('Error deleting message:', error);
-                showNotification('❌ Failed to delete message. Please try again later.');
+                showNotification('❌ Failed to delete message. Please try again.');
             });
     }
 }
@@ -511,14 +842,22 @@ function updateStatistics() {
     ).length;
     const newMessages = messages.filter(m => m.isNew).length;
 
-    activeChoresCount.textContent = activeChores;
-    completedTodayCount.textContent = completedToday;
-    newMessagesCount.textContent = newMessages;
+    if (activeChoresCount) activeChoresCount.textContent = activeChores;
+    if (completedTodayCount) completedTodayCount.textContent = completedToday;
+    if (newMessagesCount) newMessagesCount.textContent = newMessages;
 
     // Mark messages as read after viewing
     setTimeout(() => {
         messages.forEach(m => m.isNew = false);
-        saveMessages();
+        // Update in Firestore (batch update for efficiency)
+        const batch = db.batch();
+        messages.forEach(m => {
+            if (m.id) {
+                const messageRef = db.collection('messages').doc(m.id);
+                batch.update(messageRef, { isNew: false });
+            }
+        });
+        batch.commit().catch(error => console.error('Error updating message status:', error));
     }, 5000);
 }
 
@@ -577,49 +916,66 @@ function hideLoginModal() {
 }
 
 // Firebase Authentication
-signInButton.addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-        .then(result => {
-            currentUser = result.user;
-            updateUIForAuth();
-            showNotification(`👋 Welcome, ${currentUser.displayName}!`);
-        })
-        .catch(error => {
-            console.error('Error during sign-in:', error);
-            showNotification('❌ Sign-in failed. Please try again.');
-        });
-});
+if (signInButton) {
+    signInButton.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider)
+            .then(result => {
+                currentUser = result.user;
+                showNotification(`👋 Welcome, ${currentUser.displayName}!`);
+            })
+            .catch(error => {
+                console.error('Error during sign-in:', error);
+                showNotification('❌ Sign-in failed. Please try again.');
+            });
+    });
+}
 
-signOutButton.addEventListener('click', () => {
-    auth.signOut()
-        .then(() => {
-            currentUser = null;
-            updateUIForAuth();
-            showNotification('👋 You have signed out.');
-        })
-        .catch(error => {
-            console.error('Error during sign-out:', error);
-            showNotification('❌ Sign-out failed. Please try again.');
-        });
-});
+if (signOutButton) {
+    signOutButton.addEventListener('click', () => {
+        auth.signOut()
+            .then(() => {
+                currentUser = null;
+                currentHousehold = null;
+                updateUIForAuth();
+                showNotification('👋 You have signed out.');
+            })
+            .catch(error => {
+                console.error('Error during sign-out:', error);
+                showNotification('❌ Sign-out failed. Please try again.');
+            });
+    });
+}
+
+if (householdManagementBtn) {
+    householdManagementBtn.addEventListener('click', showHouseholdManagement);
+}
 
 function updateUIForAuth() {
-    if (currentUser) {
+    if (currentUser && currentHousehold) {
         // Hide sign-in button and show sign-out button
-        signInButton.classList.add('hidden');
-        signOutButton.classList.remove('hidden');
+        if (signInButton) signInButton.classList.add('hidden');
+        if (signOutButton) signOutButton.classList.remove('hidden');
+        if (householdManagementBtn) householdManagementBtn.classList.remove('hidden');
 
-        // Hide login modal if user is logged in
+        // Hide login and household modals
         hideLoginModal();
+        hideHouseholdModal();
 
-        // Load user-specific data
-        loadChoresFromFirestore();
-        loadMessagesFromFirestore();
+        // Update household info in header
+        updateHouseholdHeader();
+    } else if (currentUser && !currentHousehold) {
+        // User is logged in but not part of a household
+        if (signInButton) signInButton.classList.add('hidden');
+        if (signOutButton) signOutButton.classList.remove('hidden');
+        if (householdManagementBtn) householdManagementBtn.classList.add('hidden');
+        hideLoginModal();
+        // Household modal will be shown by checkUserHousehold()
     } else {
         // Show sign-in button and hide sign-out button
-        signInButton.classList.remove('hidden');
-        signOutButton.classList.add('hidden');
+        if (signInButton) signInButton.classList.remove('hidden');
+        if (signOutButton) signOutButton.classList.add('hidden');
+        if (householdManagementBtn) householdManagementBtn.classList.add('hidden');
 
         // Show login modal if user is logged out
         showLoginModal();
@@ -632,14 +988,42 @@ function updateUIForAuth() {
     }
 }
 
+function updateHouseholdHeader() {
+    if (!currentHousehold) return;
+
+    // Update header to show household name and code
+    const headerInfo = document.querySelector('header .flex.items-center.space-x-3 div:last-child');
+    if (headerInfo) {
+        headerInfo.innerHTML = `
+            <h1 class="text-2xl font-bold text-gray-800">
+                Roommate Portal
+            </h1>
+            <p class="text-sm text-gray-600">
+                ${currentHousehold.name} • Code: ${currentHousehold.code}
+            </p>
+        `;
+    }
+
+    // Update household info section
+    const householdInfo = document.getElementById('householdInfo');
+    if (householdInfo && currentHousehold.memberDetails) {
+        const memberCount = Object.keys(currentHousehold.memberDetails).length;
+        householdInfo.innerHTML = `
+            <span class="text-green-700 font-medium">
+                🏠 ${currentHousehold.name} • ${memberCount} member${memberCount !== 1 ? 's' : ''}
+            </span>
+        `;
+    }
+}
+
 // Keyboard shortcuts
 document.addEventListener('keydown', function (e) {
     // Ctrl/Cmd + Enter to submit forms
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         if (document.activeElement === choreInput || document.activeElement === choreAssignee) {
-            addChoreForm.dispatchEvent(new Event('submit'));
+            if (addChoreForm) addChoreForm.dispatchEvent(new Event('submit'));
         } else if (document.activeElement === messageInput || document.activeElement === authorInput) {
-            postMessageForm.dispatchEvent(new Event('submit'));
+            if (postMessageForm) postMessageForm.dispatchEvent(new Event('submit'));
         }
     }
 
@@ -653,10 +1037,140 @@ document.addEventListener('keydown', function (e) {
             switchTab('messages');
         }
     }
-}); // Ensure proper closure of the function or block
+});
 
 // Auto-resize textarea
-messageInput.addEventListener('input', function () {
-    this.style.height = 'auto';
-    this.style.height = this.scrollHeight + 'px';
-});
+if (messageInput) {
+    messageInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+}
+
+// Household Management Panel
+function showHouseholdManagement() {
+    if (!currentHousehold) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'householdManagementModal';
+    modal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50';
+
+    const membersList = Object.entries(currentHousehold.memberDetails || {})
+        .map(([uid, member]) => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">${getAvatarEmoji(member.displayName)}</span>
+                    <div>
+                        <p class="font-medium text-gray-800">${member.displayName}</p>
+                        <p class="text-sm text-gray-500">${member.email}</p>
+                    </div>
+                </div>
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${member.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+            }">${member.role}</span>
+            </div>
+        `).join('');
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">🏠 Household Management</h2>
+            
+            <div class="space-y-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-blue-800 mb-2">Household Details</h3>
+                    <p class="text-gray-700"><strong>Name:</strong> ${currentHousehold.name}</p>
+                    <p class="text-gray-700"><strong>Code:</strong> ${currentHousehold.code}</p>
+                    <p class="text-gray-700"><strong>Members:</strong> ${Object.keys(currentHousehold.memberDetails || {}).length}</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-3">Members</h3>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        ${membersList}
+                    </div>
+                </div>
+                
+                <div class="flex space-x-3 pt-4 border-t">
+                    <button id="leaveHouseholdBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
+                        Leave Household
+                    </button>
+                    <button id="closeHouseholdManagementBtn" class="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    // Add event listeners
+    document.getElementById('leaveHouseholdBtn').addEventListener('click', leaveHousehold);
+    document.getElementById('closeHouseholdManagementBtn').addEventListener('click', () => {
+        modal.remove();
+        document.body.style.overflow = '';
+    });
+}
+
+async function leaveHousehold() {
+    if (!currentHousehold || !currentUser) return;
+
+    const isAdmin = currentHousehold.memberDetails[currentUser.uid]?.role === 'admin';
+    const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
+
+    let confirmMessage = 'Are you sure you want to leave this household?';
+    if (isAdmin && memberCount > 1) {
+        confirmMessage = 'You are the admin of this household. Leaving will transfer admin rights to another member. Are you sure?';
+    } else if (isAdmin && memberCount === 1) {
+        confirmMessage = 'You are the only member of this household. Leaving will delete the household permanently. Are you sure?';
+    }
+
+    if (confirm(confirmMessage)) {
+        try {
+            if (memberCount === 1) {
+                // Delete the household entirely
+                await db.collection('households').doc(currentHousehold.id).delete();
+                showNotification('🏠 Household deleted successfully.');
+            } else {
+                // Remove user from household
+                await db.collection('households').doc(currentHousehold.id).update({
+                    members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
+                    [`memberDetails.${currentUser.uid}`]: firebase.firestore.FieldValue.delete()
+                });
+
+                // If user was admin, transfer admin to first remaining member
+                if (isAdmin) {
+                    const remainingMembers = Object.keys(currentHousehold.memberDetails).filter(uid => uid !== currentUser.uid);
+                    if (remainingMembers.length > 0) {
+                        await db.collection('households').doc(currentHousehold.id).update({
+                            [`memberDetails.${remainingMembers[0]}.role`]: 'admin'
+                        });
+                    }
+                }
+
+                showNotification('👋 You have left the household.');
+            }
+
+            // Remove household reference from user
+            await db.collection('users').doc(currentUser.uid).update({
+                householdId: firebase.firestore.FieldValue.delete()
+            });
+
+            // Reset household state
+            currentHousehold = null;
+
+            // Close modal and show household selection
+            const modal = document.getElementById('householdManagementModal');
+            if (modal) {
+                modal.remove();
+                document.body.style.overflow = '';
+            }
+
+            showHouseholdModal();
+
+        } catch (error) {
+            console.error('Error leaving household:', error);
+            showNotification('❌ Failed to leave household. Please try again.');
+        }
+    }
+}
