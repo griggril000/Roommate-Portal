@@ -1,4 +1,4 @@
-// RoomieHub - Enhanced Roommate Portal
+// Roommate Portal - Enhanced Roommate Portal
 // 
 // HOUSEHOLD MANAGEMENT FEATURES:
 // 1. After login, users must create or join a household
@@ -33,8 +33,8 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
     });
 
 // Data storage
-let chores = JSON.parse(localStorage.getItem('roomieHub_chores')) || [];
-let messages = JSON.parse(localStorage.getItem('roomieHub_messages')) || [];
+let chores = JSON.parse(localStorage.getItem('roommatePortal_chores')) || [];
+let messages = JSON.parse(localStorage.getItem('roommatePortal_messages')) || [];
 
 // Household management
 let currentHousehold = null;
@@ -652,6 +652,7 @@ function loadMessagesFromFirestore() {
                 return bTime - aTime; // Most recent first
             });
             loadMessages();
+            updateStatistics(); // Update statistics when messages change
         }, (error) => {
             console.error('Error loading messages:', error);
             // Only show error notification if user is still logged in and has a household
@@ -667,8 +668,16 @@ function updateHouseholdMembers() {
     // Update assignee dropdown with household members
     const choreAssignee = document.getElementById('choreAssignee');
     if (choreAssignee) {
-        choreAssignee.innerHTML = '<option value="">Assign to...</option>';
+        // Clear existing options more efficiently
+        choreAssignee.innerHTML = '';
 
+        // Create and add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Assign to...';
+        choreAssignee.appendChild(defaultOption);
+
+        // Add member options
         Object.values(currentHousehold.memberDetails).forEach(member => {
             const option = document.createElement('option');
             option.value = member.displayName;
@@ -916,7 +925,8 @@ if (postMessageForm) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 householdId: currentHousehold.id,
                 authorId: currentUser.uid,
-                isNew: true
+                // Track which users have read this message (author has read it by default)
+                readBy: [currentUser.uid]
             };
 
             // Add to Firestore
@@ -968,7 +978,8 @@ function loadMessages() {
                 <div class="flex items-center space-x-2">
                     <span class="text-2xl">${avatarEmoji}</span>
                     <span class="message-author">${message.author}</span>
-                    ${message.isNew ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">NEW</span>' : ''}
+                    ${!message.readBy || !message.readBy.includes(currentUser.uid) ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">NEW</span>' : ''}
+
                 </div>
                 <div class="flex items-center space-x-3">
                     <span class="message-timestamp">${message.timestamp ? new Date(message.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span>
@@ -1014,10 +1025,10 @@ function deleteMessage(id) {
 // Statistics and UI Updates
 function updateStatistics() {
     // Handle case when there's no data (logged out or no household)
-    if (!currentUser || !currentHousehold || chores.length === 0) {
+    if (!currentUser || !currentHousehold) {
         if (activeChoresCount) activeChoresCount.textContent = '0';
         if (completedTodayCount) completedTodayCount.textContent = '0';
-        if (newMessagesCount) newMessagesCount.textContent = messages.filter(m => m.isNew).length || '0';
+        if (newMessagesCount) newMessagesCount.textContent = '0';
         return;
     }
 
@@ -1025,137 +1036,133 @@ function updateStatistics() {
     const completedToday = chores.filter(c =>
         c.completed && c.completedDate === new Date().toLocaleDateString()
     ).length;
-    const newMessages = messages.filter(m => m.isNew).length;
+
+    // Count messages that the current user hasn't read yet
+    const newMessages = messages.filter(m =>
+        !m.readBy || !m.readBy.includes(currentUser.uid)
+    ).length;
 
     if (activeChoresCount) activeChoresCount.textContent = activeChores;
     if (completedTodayCount) completedTodayCount.textContent = completedToday;
     if (newMessagesCount) newMessagesCount.textContent = newMessages;
 
-    // Mark messages as read after viewing (only if user is logged in and has household)
+    // Mark messages as read after viewing (only if user is still logged in and has household)
     if (currentUser && currentHousehold && messages.length > 0) {
         setTimeout(() => {
-            messages.forEach(m => m.isNew = false);
-            // Update in Firestore (batch update for efficiency)
-            const batch = db.batch();
-            messages.forEach(m => {
-                if (m.id) {
-                    const messageRef = db.collection('messages').doc(m.id);
-                    batch.update(messageRef, { isNew: false });
-                }
-            });
-            batch.commit().catch(error => {
-                // Only show error if user is still logged in
-                if (currentUser && currentHousehold) {
-                    console.error('Error updating message status:', error);
-                }
-            });
+            markMessagesAsRead();
         }, 5000);
     }
 }
 
-// Utility Functions
-function getAvatarEmoji(name) {
-    const avatars = ['👨‍💻', '👩‍🎨', '👨‍🍳', '👩‍🔬', '👨‍🎵', '👩‍💼', '👨‍🏫', '👩‍⚕️'];
-    const hash = name.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-    }, 0);
-    return avatars[Math.abs(hash) % avatars.length];
-}
+// New function to mark messages as read for the current user
+function markMessagesAsRead() {
+    if (!currentUser || !currentHousehold) return;
 
-function showNotification(message) {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 bg-white border border-gray-200 p-4 rounded-lg shadow-md z-50 animate-slide-in';
-    notification.innerHTML = `
-        <div class="flex items-center space-x-2">
-            <span class="text-gray-800">${message}</span>
-            <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `;
+    const batch = db.batch();
+    let hasUpdates = false;
 
-    document.body.appendChild(notification);
-
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
+    messages.forEach(message => {
+        if (message.id && (!message.readBy || !message.readBy.includes(currentUser.uid))) {
+            const messageRef = db.collection('messages').doc(message.id);
+            batch.update(messageRef, {
+                readBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+            });
+            hasUpdates = true;
         }
-    }, 5000);
+    });
+
+    if (hasUpdates) {
+        batch.commit().catch(error => {
+            // Only show error if user is still logged in
+            if (currentUser && currentHousehold) {
+                console.error('Error updating message read status:', error);
+            }
+        });
+    }
 }
 
-// Show login modal if user is not authenticated
-function showLoginModal() {
-    const loginModal = document.getElementById('loginModal');
-    loginModal.classList.remove('hidden');
+// Unified button management to eliminate mobile/desktop duplication
+function updateAuthButtons(isSignedIn, hasHousehold) {
+    const buttons = {
+        signIn: {
+            desktop: document.getElementById('signInButton'),
+            mobile: document.getElementById('signInButtonMobile')
+        },
+        signOut: {
+            desktop: document.getElementById('signOutButton'),
+            mobile: document.getElementById('signOutButtonMobile')
+        },
+        household: {
+            desktop: document.getElementById('householdManagementBtn'),
+            mobile: document.getElementById('householdManagementBtnMobile')
+        }
+    };
 
-    // Disable scrolling but allow background to be visible
-    document.body.style.overflow = 'hidden';
-    // Don't disable pointer events on body - let the modal handle it
-}
+    // Update sign in/out buttons
+    Object.values(buttons.signIn).forEach(btn => {
+        if (btn) btn.classList.toggle('hidden', isSignedIn);
+    });
 
-// Hide login modal
-function hideLoginModal() {
-    const loginModal = document.getElementById('loginModal');
-    loginModal.classList.add('hidden');
+    Object.values(buttons.signOut).forEach(btn => {
+        if (btn) btn.classList.toggle('hidden', !isSignedIn);
+    });
 
-    // Re-enable scrolling
-    document.body.style.overflow = '';
-}
-
-// Firebase Authentication
-if (signInButton) {
-    signInButton.addEventListener('click', () => {
-        showLoginModal();
+    // Update household management buttons
+    Object.values(buttons.household).forEach(btn => {
+        if (btn) btn.classList.toggle('hidden', !isSignedIn || !hasHousehold);
     });
 }
 
-if (signInButtonMobile) {
-    signInButtonMobile.addEventListener('click', () => {
-        showLoginModal();
-    });
+// Helper functions to update UI without HTML overwriting
+function updateBrandInfo(title, subtitle) {
+    const brandInfo = document.getElementById('brandInfo');
+    if (!brandInfo) return;
+
+    const titleElement = brandInfo.querySelector('h1');
+    const subtitleElement = brandInfo.querySelector('p');
+
+    if (titleElement) titleElement.textContent = title;
+    if (subtitleElement) subtitleElement.textContent = subtitle;
 }
 
-if (signOutButton) {
-    signOutButton.addEventListener('click', () => {
-        auth.signOut()
-            .then(() => {
-                currentUser = null;
-                currentHousehold = null;
-                updateUIForAuth();
-                showNotification('👋 You have signed out.');
-            })
-            .catch(error => {
-                console.error('Error during sign-out:', error);
-                showNotification('❌ Sign-out failed. Please try again.');
-            });
-    });
+function updateHouseholdStatus(statusText, isConnected) {
+    // Update desktop household info
+    const householdInfo = document.getElementById('householdInfo');
+    if (householdInfo) {
+        const statusSpan = householdInfo.querySelector('span');
+        if (statusSpan) {
+            statusSpan.textContent = `🏠 ${statusText}`;
+            statusSpan.className = `font-medium ${isConnected ? 'text-green-700' : 'text-gray-500'}`;
+        }
+    }
+
+    // Update mobile household info
+    const householdInfoMobile = document.getElementById('householdInfoMobile');
+    if (householdInfoMobile) {
+        const statusSpan = householdInfoMobile.querySelector('span');
+        if (statusSpan) {
+            statusSpan.textContent = isConnected ? `🏠 ${statusText.split(' • ')[1] || statusText}` : '🏠 No household';
+            statusSpan.className = `font-medium text-sm ${isConnected ? 'text-green-700' : 'text-gray-500'}`;
+        }
+    }
 }
 
-if (signOutButtonMobile) {
-    signOutButtonMobile.addEventListener('click', () => {
-        auth.signOut()
-            .then(() => {
-                currentUser = null;
-                currentHousehold = null;
-                updateUIForAuth();
-                showNotification('👋 You have signed out.');
-            })
-            .catch(error => {
-                console.error('Error during sign-out:', error);
-                showNotification('❌ Sign-out failed. Please try again.');
-            });
-    });
+function updateHouseholdHeader() {
+    if (currentHousehold) {
+        const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
+        const statusText = `${currentHousehold.name} • ${memberCount} member${memberCount !== 1 ? 's' : ''}`;
+        updateHouseholdStatus(statusText, true);
+    } else {
+        updateHouseholdStatus('No household', false);
+    }
 }
 
-if (householdManagementBtn) {
-    householdManagementBtn.addEventListener('click', showHouseholdManagement);
-}
+function clearHouseholdHeader() {
+    // Update brand info to show default state
+    updateBrandInfo('Roommate Portal', 'Your Shared Living Dashboard');
 
-if (householdManagementBtnMobile) {
-    householdManagementBtnMobile.addEventListener('click', showHouseholdManagement);
+    // Update household status
+    updateHouseholdStatus('Not connected to a household', false);
 }
 
 function updateUIForAuth() {
@@ -1170,19 +1177,6 @@ function updateUIForAuth() {
         header.style.position = 'static';
     }
 
-    // Force desktop header to be visible on desktop
-    const desktopHeader = document.querySelector('.hidden.md\\:flex');
-    if (desktopHeader && window.innerWidth >= 768) {
-        desktopHeader.style.display = 'flex';
-        desktopHeader.classList.remove('hidden');
-    }
-
-    // Force mobile header to be visible on mobile
-    const mobileHeader = document.querySelector('.flex.flex-col.md\\:hidden');
-    if (mobileHeader && window.innerWidth < 768) {
-        mobileHeader.style.display = 'flex';
-    }
-
     if (currentUser && currentHousehold) {
         // Show main content
         if (mainContent) {
@@ -1191,13 +1185,8 @@ function updateUIForAuth() {
             mainContent.style.pointerEvents = 'auto';
         }
 
-        // Hide sign-in buttons and show sign-out buttons
-        if (signInButton) signInButton.classList.add('hidden');
-        if (signInButtonMobile) signInButtonMobile.classList.add('hidden');
-        if (signOutButton) signOutButton.classList.remove('hidden');
-        if (signOutButtonMobile) signOutButtonMobile.classList.remove('hidden');
-        if (householdManagementBtn) householdManagementBtn.classList.remove('hidden');
-        if (householdManagementBtnMobile) householdManagementBtnMobile.classList.remove('hidden');
+        // Use unified button management
+        updateAuthButtons(true, true);
 
         // Hide login and household modals
         hideLoginModal();
@@ -1214,12 +1203,7 @@ function updateUIForAuth() {
         }
 
         // User is logged in but not part of a household
-        if (signInButton) signInButton.classList.add('hidden');
-        if (signInButtonMobile) signInButtonMobile.classList.add('hidden');
-        if (signOutButton) signOutButton.classList.remove('hidden');
-        if (signOutButtonMobile) signOutButtonMobile.classList.remove('hidden');
-        if (householdManagementBtn) householdManagementBtn.classList.add('hidden');
-        if (householdManagementBtnMobile) householdManagementBtnMobile.classList.add('hidden');
+        updateAuthButtons(true, false);
         hideLoginModal();
 
         // Clean up data when no household
@@ -1236,12 +1220,7 @@ function updateUIForAuth() {
         }
 
         // Show sign-in buttons and hide sign-out buttons
-        if (signInButton) signInButton.classList.remove('hidden');
-        if (signInButtonMobile) signInButtonMobile.classList.remove('hidden');
-        if (signOutButton) signOutButton.classList.add('hidden');
-        if (signOutButtonMobile) signOutButtonMobile.classList.add('hidden');
-        if (householdManagementBtn) householdManagementBtn.classList.add('hidden');
-        if (householdManagementBtnMobile) householdManagementBtnMobile.classList.add('hidden');
+        updateAuthButtons(false, false);
 
         // Hide login modal when logged out (only show when sign-in button is clicked)
         hideLoginModal();
@@ -1252,138 +1231,6 @@ function updateUIForAuth() {
     }
 }
 
-function clearHouseholdHeader() {
-    // Clear header household name and code (desktop)
-    const headerInfo = document.querySelector('header .hidden.md\\:flex .flex.items-center.space-x-3 div:last-child');
-    if (headerInfo) {
-        headerInfo.innerHTML = `
-            <h1 class="text-2xl font-bold text-gray-800">
-                RoomieHub
-            </h1>
-            <p class="text-sm text-gray-600">
-                Your Roommate Portal
-            </p>
-        `;
-    }
-
-    // Clear mobile header title
-    const mobileHeaderInfo = document.querySelector('header .flex.flex-col .flex.items-center.space-x-3 div:last-child');
-    if (mobileHeaderInfo) {
-        mobileHeaderInfo.innerHTML = `
-            <h1 class="text-xl font-bold text-gray-800">
-                RoomieHub
-            </h1>
-            <p class="text-xs text-gray-600">
-                Roommate Portal
-            </p>
-        `;
-    }
-
-    // Clear household info section (desktop)
-    const householdInfo = document.getElementById('householdInfo');
-    if (householdInfo) {
-        householdInfo.innerHTML = `
-            <span class="text-gray-500 font-medium">
-                🏠 Not connected to a household
-            </span>
-        `;
-    }
-
-    // Clear household info section (mobile)
-    const householdInfoMobile = document.getElementById('householdInfoMobile');
-    if (householdInfoMobile) {
-        householdInfoMobile.innerHTML = `
-            <span class="text-gray-500 font-medium text-sm">
-                🏠 No household
-            </span>
-        `;
-    }
-}
-
-function updateHouseholdHeader() {
-    if (!currentHousehold) return;
-
-    // Update header to show household name and code (desktop)
-    const headerInfo = document.querySelector('header .hidden.md\\:flex .flex.items-center.space-x-3 div:last-child');
-    if (headerInfo) {
-        headerInfo.innerHTML = `
-            <h1 class="text-2xl font-bold text-gray-800">
-                Roommate Portal
-            </h1>
-            <p class="text-sm text-gray-600">
-                ${currentHousehold.name} • Code: ${currentHousehold.code}
-            </p>
-        `;
-    }
-
-    // Update mobile header title
-    const mobileHeaderInfo = document.querySelector('header .flex.flex-col .flex.items-center.space-x-3 div:last-child');
-    if (mobileHeaderInfo) {
-        mobileHeaderInfo.innerHTML = `
-            <h1 class="text-xl font-bold text-gray-800">
-                ${currentHousehold.name}
-            </h1>
-            <p class="text-xs text-gray-600">
-                Code: ${currentHousehold.code}
-            </p>
-        `;
-    }
-
-    // Update household info section (desktop)
-    const householdInfo = document.getElementById('householdInfo');
-    if (householdInfo && currentHousehold.memberDetails) {
-        const memberCount = Object.keys(currentHousehold.memberDetails).length;
-        householdInfo.innerHTML = `
-            <span class="text-green-700 font-medium">
-                🏠 ${currentHousehold.name} • ${memberCount} member${memberCount !== 1 ? 's' : ''}
-            </span>
-        `;
-    }
-
-    // Update household info section (mobile)
-    const householdInfoMobile = document.getElementById('householdInfoMobile');
-    if (householdInfoMobile && currentHousehold.memberDetails) {
-        const memberCount = Object.keys(currentHousehold.memberDetails).length;
-        householdInfoMobile.innerHTML = `
-            <span class="text-green-700 font-medium text-sm">
-                🏠 ${memberCount} member${memberCount !== 1 ? 's' : ''}
-            </span>
-        `;
-    }
-}
-
-// Keyboard shortcuts
-document.addEventListener('keydown', function (e) {
-    // Ctrl/Cmd + Enter to submit forms
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        if (document.activeElement === choreInput || document.activeElement === choreAssignee) {
-            if (addChoreForm) addChoreForm.dispatchEvent(new Event('submit'));
-        } else if (document.activeElement === messageInput || document.activeElement === authorInput) {
-            if (postMessageForm) postMessageForm.dispatchEvent(new Event('submit'));
-        }
-    }
-
-    // Tab switching with keyboard
-    if (e.ctrlKey || e.metaKey) {
-        if (e.key === '1') {
-            e.preventDefault();
-            switchTab('chores');
-        } else if (e.key === '2') {
-            e.preventDefault();
-            switchTab('messages');
-        }
-    }
-});
-
-// Auto-resize textarea
-if (messageInput) {
-    messageInput.addEventListener('input', function () {
-        this.style.height = 'auto';
-        this.style.height = this.scrollHeight + 'px';
-    });
-}
-
-// Household Management Panel
 function showHouseholdManagement() {
     if (!currentHousehold) return;
 
@@ -1511,28 +1358,107 @@ async function leaveHousehold() {
     }
 }
 
-// Handle window resize to ensure proper header display
-window.addEventListener('resize', function () {
-    const desktopHeader = document.querySelector('.hidden.md\\:flex');
-    const mobileHeader = document.querySelector('.flex.flex-col.md\\:hidden');
+// Utility Functions
+function getAvatarEmoji(name) {
+    const avatars = ['👨‍💻', '👩‍🎨', '👨‍🍳', '👩‍🔬', '👨‍🎵', '👩‍💼', '👨‍🏫', '👩‍⚕️'];
+    const hash = name.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+    }, 0);
+    return avatars[Math.abs(hash) % avatars.length];
+}
 
-    if (window.innerWidth >= 768) {
-        // Desktop view
-        if (desktopHeader) {
-            desktopHeader.style.display = 'flex';
-            desktopHeader.classList.remove('hidden');
+function showNotification(message) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-white border border-gray-200 p-4 rounded-lg shadow-md z-50 animate-slide-in';
+    notification.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <span class="text-gray-800">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
         }
-        if (mobileHeader) {
-            mobileHeader.style.display = 'none';
-        }
-    } else {
-        // Mobile view
-        if (mobileHeader) {
-            mobileHeader.style.display = 'flex';
-        }
-        if (desktopHeader) {
-            desktopHeader.style.display = 'none';
-            desktopHeader.classList.add('hidden');
-        }
-    }
-});
+    }, 5000);
+}
+
+// Show login modal if user is not authenticated
+function showLoginModal() {
+    const loginModal = document.getElementById('loginModal');
+    loginModal.classList.remove('hidden');
+
+    // Disable scrolling but allow background to be visible
+    document.body.style.overflow = 'hidden';
+    // Don't disable pointer events on body - let the modal handle it
+}
+
+// Hide login modal
+function hideLoginModal() {
+    const loginModal = document.getElementById('loginModal');
+    loginModal.classList.add('hidden');
+
+    // Re-enable scrolling
+    document.body.style.overflow = '';
+}
+
+// Firebase Authentication
+if (signInButton) {
+    signInButton.addEventListener('click', () => {
+        showLoginModal();
+    });
+}
+
+if (signInButtonMobile) {
+    signInButtonMobile.addEventListener('click', () => {
+        showLoginModal();
+    });
+}
+
+if (signOutButton) {
+    signOutButton.addEventListener('click', () => {
+        auth.signOut()
+            .then(() => {
+                currentUser = null;
+                currentHousehold = null;
+                updateUIForAuth();
+                showNotification('👋 You have signed out.');
+            })
+            .catch(error => {
+                console.error('Error during sign-out:', error);
+                showNotification('❌ Sign-out failed. Please try again.');
+            });
+    });
+}
+
+if (signOutButtonMobile) {
+    signOutButtonMobile.addEventListener('click', () => {
+        auth.signOut()
+            .then(() => {
+                currentUser = null;
+                currentHousehold = null;
+                updateUIForAuth();
+                showNotification('👋 You have signed out.');
+            })
+            .catch(error => {
+                console.error('Error during sign-out:', error);
+                showNotification('❌ Sign-out failed. Please try again.');
+            });
+    });
+}
+
+if (householdManagementBtn) {
+    householdManagementBtn.addEventListener('click', showHouseholdManagement);
+}
+
+if (householdManagementBtnMobile) {
+    householdManagementBtnMobile.addEventListener('click', showHouseholdManagement);
+}

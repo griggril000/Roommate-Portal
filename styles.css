@@ -1,4 +1,4 @@
-/* RoomieHub - Modern Dashboard Styles */
+/* Roommate Portal - Modern Dashboard Styles */
 
 /* Global Styles */
 * {
@@ -19,25 +19,37 @@ header {
     z-index: 40 !important;
 }
 
-/* Force desktop header to show on desktop screens */
+/* Responsive header layout */
 @media (min-width: 768px) {
-    .hidden.md\:flex {
+
+    /* Desktop: Show household info and action buttons, hide mobile menu */
+    #householdInfo {
         display: flex !important;
     }
 
-    .md\:hidden {
+    #actionButtons {
+        display: flex !important;
+    }
+
+    #mobileMenu {
         display: none !important;
     }
 }
 
-/* Force mobile header to show on mobile screens */
 @media (max-width: 767px) {
-    .flex.flex-col.md\:hidden {
-        display: flex !important;
+
+    /* Mobile: Hide household info and action buttons from main header */
+    #householdInfo {
+        display: none !important;
     }
 
-    .hidden.md\:flex {
+    #actionButtons {
         display: none !important;
+    }
+
+    /* Mobile menu visibility controlled by JS toggle */
+    #mobileMenu:not(.hidden) {
+        display: block !important;
     }
 }
 
