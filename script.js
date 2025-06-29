@@ -1443,7 +1443,12 @@ function showHouseholdManagement() {
                 <div class="flex items-center space-x-3">
                     <span class="text-2xl">${getAvatarEmoji(member.displayName)}</span>
                     <div>
-                        <p class="font-medium text-gray-800">${member.displayName}</p>
+                        <div class="flex items-center space-x-2">
+                            <p class="font-medium text-gray-800">${member.displayName}</p>
+                            ${uid === currentUser.uid ? `<button onclick="showEditProfileModal()" class="text-blue-600 hover:text-blue-800 transition-colors p-1" title="Edit your name">
+                                <i class="fas fa-pencil-alt text-sm"></i>
+                            </button>` : ''}
+                        </div>
                         <p class="text-sm text-gray-500">${member.email}</p>
                     </div>
                 </div>
@@ -1472,9 +1477,6 @@ function showHouseholdManagement() {
                 </div>
                 
                 <div class="flex space-x-3 pt-4 border-t">
-                    <button id="editProfileBtn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                        Edit Profile
-                    </button>
                     <button id="leaveHouseholdBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
                         Leave Household
                     </button>
@@ -1496,11 +1498,6 @@ function showHouseholdManagement() {
     document.body.style.overflow = 'hidden';
 
     // Add event listeners
-    document.getElementById('editProfileBtn').addEventListener('click', () => {
-        modal.remove();
-        document.body.style.overflow = '';
-        showEditProfileModal();
-    });
     document.getElementById('leaveHouseholdBtn').addEventListener('click', leaveHousehold);
     document.getElementById('deleteAccountBtn').addEventListener('click', deleteUserAccount);
     document.getElementById('closeHouseholdManagementBtn').addEventListener('click', () => {
@@ -1909,6 +1906,12 @@ function clearLocalStorage() {
 }
 
 function showEditProfileModal() {
+    // Close the household management modal if it's open
+    const householdModal = document.getElementById('householdManagementModal');
+    if (householdModal) {
+        householdModal.remove();
+    }
+
     const modal = document.createElement('div');
     modal.id = 'editProfileModal';
     modal.className = 'fixed inset-0 bg-gray-800 bg-opacity-40 flex items-center justify-center z-50';
