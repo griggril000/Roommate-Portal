@@ -96,11 +96,17 @@ document.addEventListener('DOMContentLoaded', function () {
         googleSignInButton.addEventListener('click', () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider)
-                .then(result => {
+                .then(async result => {
                     currentUser = result.user;
+
+                    // Check if we need to collect the user's name
+                    if (!currentUser.displayName || currentUser.displayName.trim() === '') {
+                        await promptForUserName();
+                    }
+
                     hideLoginModal();
                     updateUIForAuth();
-                    showNotification(`👋 Welcome, ${currentUser.displayName}!`);
+                    showNotification(`👋 Welcome, ${currentUser.displayName || currentUser.email}!`);
                 })
                 .catch(error => {
                     console.error('Error during Google sign-in:', error);
@@ -129,22 +135,27 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
 
             const emailLoginForm = document.getElementById('emailLoginForm');
-            emailLoginForm.addEventListener('submit', (e) => {
+            emailLoginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const email = document.getElementById('emailInput').value;
                 const password = document.getElementById('passwordInput').value;
 
-                auth.signInWithEmailAndPassword(email, password)
-                    .then(result => {
-                        currentUser = result.user;
-                        hideLoginModal();
-                        updateUIForAuth();
-                        showNotification(`👋 Welcome, ${currentUser.email}!`);
-                    })
-                    .catch(error => {
-                        console.error('Error during email sign-in:', error);
-                        showNotification('❌ Email sign-in failed. Please check your credentials.');
-                    });
+                try {
+                    const result = await auth.signInWithEmailAndPassword(email, password);
+                    currentUser = result.user;
+
+                    // Check if we need to collect the user's name
+                    if (!currentUser.displayName || currentUser.displayName.trim() === '') {
+                        await promptForUserName();
+                    }
+
+                    hideLoginModal();
+                    updateUIForAuth();
+                    showNotification(`👋 Welcome, ${currentUser.displayName || currentUser.email}!`);
+                } catch (error) {
+                    console.error('Error during email sign-in:', error);
+                    showNotification('❌ Email sign-in failed. Please check your credentials.');
+                }
             });
 
             document.getElementById('showSignUp').addEventListener('click', () => {
@@ -152,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="bg-white rounded-lg shadow-lg p-6 w-96">
                         <h2 class="text-2xl font-bold text-gray-800 mb-4">Sign Up</h2>
                         <form id="signUpForm" class="space-y-4">
+                            <input type="text" id="signUpName" class="w-full px-4 py-2 border rounded-lg" placeholder="Your Name" required />
                             <input type="email" id="signUpEmail" class="w-full px-4 py-2 border rounded-lg" placeholder="Email" required />
                             <input type="password" id="signUpPassword" class="w-full px-4 py-2 border rounded-lg" placeholder="Password" required />
                             <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">Sign Up</button>
@@ -162,22 +174,33 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 `;
 
-                document.getElementById('signUpForm').addEventListener('submit', (e) => {
+                document.getElementById('signUpForm').addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    const name = document.getElementById('signUpName').value.trim();
                     const email = document.getElementById('signUpEmail').value;
                     const password = document.getElementById('signUpPassword').value;
 
-                    auth.createUserWithEmailAndPassword(email, password)
-                        .then(result => {
-                            currentUser = result.user;
-                            hideLoginModal();
-                            updateUIForAuth();
-                            showNotification(`🎉 Account created! Welcome, ${currentUser.email}!`);
-                        })
-                        .catch(error => {
-                            console.error('Error during sign-up:', error);
-                            showNotification('❌ Sign-up failed. Please try again.');
+                    if (!name) {
+                        showNotification('❌ Please enter your name.');
+                        return;
+                    }
+
+                    try {
+                        const result = await auth.createUserWithEmailAndPassword(email, password);
+
+                        // Update the user's profile with their name
+                        await result.user.updateProfile({
+                            displayName: name
                         });
+
+                        currentUser = result.user;
+                        hideLoginModal();
+                        updateUIForAuth();
+                        showNotification(`🎉 Account created! Welcome, ${name}!`);
+                    } catch (error) {
+                        console.error('Error during sign-up:', error);
+                        showNotification('❌ Sign-up failed. Please try again.');
+                    }
                 });
 
                 document.getElementById('backToSignIn').addEventListener('click', () => {
@@ -301,9 +324,19 @@ function initializeApp() {
 }
 
 // Check authentication state on page load
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
         currentUser = user;
+
+        // Check if we need to collect the user's name (only for existing users who don't have a displayName)
+        if (!currentUser.displayName || currentUser.displayName.trim() === '') {
+            try {
+                await promptForUserName();
+            } catch (error) {
+                console.error('Error prompting for user name:', error);
+            }
+        }
+
         checkUserHousehold();
     } else {
         currentUser = null;
@@ -831,6 +864,64 @@ if (addChoreForm) {
                     showNotification('❌ Failed to add chore. Please try again.');
                 });
         }
+    });
+}
+
+// Function to prompt for user name if not available from auth provider
+async function promptForUserName() {
+    return new Promise((resolve, reject) => {
+        const nameModal = document.createElement('div');
+        nameModal.id = 'nameModal';
+        nameModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-40 flex items-center justify-center z-50';
+        nameModal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-md mx-4">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">👋 What's your name?</h2>
+                <p class="text-gray-600 mb-6">Help your roommates know who you are!</p>
+                
+                <form id="nameForm" class="space-y-4">
+                    <input type="text" id="userNameInput" class="w-full px-4 py-3 border rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter your name" required />
+                    <button type="submit" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        Continue
+                    </button>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(nameModal);
+        document.body.style.overflow = 'hidden';
+
+        const nameForm = document.getElementById('nameForm');
+        const userNameInput = document.getElementById('userNameInput');
+
+        // Focus on the input field
+        setTimeout(() => userNameInput.focus(), 100);
+
+        nameForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = userNameInput.value.trim();
+
+            if (!name) {
+                showNotification('❌ Please enter your name.');
+                return;
+            }
+
+            try {
+                // Update the user's profile with their name
+                await currentUser.updateProfile({
+                    displayName: name
+                });
+
+                // Remove the modal
+                document.body.removeChild(nameModal);
+                document.body.style.overflow = '';
+
+                resolve(name);
+            } catch (error) {
+                console.error('Error updating user profile:', error);
+                showNotification('❌ Failed to update profile. Please try again.');
+                reject(error);
+            }
+        });
     });
 }
 
@@ -1381,6 +1472,9 @@ function showHouseholdManagement() {
                 </div>
                 
                 <div class="flex space-x-3 pt-4 border-t">
+                    <button id="editProfileBtn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        Edit Profile
+                    </button>
                     <button id="leaveHouseholdBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
                         Leave Household
                     </button>
@@ -1402,6 +1496,11 @@ function showHouseholdManagement() {
     document.body.style.overflow = 'hidden';
 
     // Add event listeners
+    document.getElementById('editProfileBtn').addEventListener('click', () => {
+        modal.remove();
+        document.body.style.overflow = '';
+        showEditProfileModal();
+    });
     document.getElementById('leaveHouseholdBtn').addEventListener('click', leaveHousehold);
     document.getElementById('deleteAccountBtn').addEventListener('click', deleteUserAccount);
     document.getElementById('closeHouseholdManagementBtn').addEventListener('click', () => {
@@ -1807,4 +1906,190 @@ function clearLocalStorage() {
     localStorage.removeItem('roommatePortal_chores');
     localStorage.removeItem('roommatePortal_messages');
     console.log('Local storage cleared');
+}
+
+function showEditProfileModal() {
+    const modal = document.createElement('div');
+    modal.id = 'editProfileModal';
+    modal.className = 'fixed inset-0 bg-gray-800 bg-opacity-40 flex items-center justify-center z-50';
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-w-md mx-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">✏️ Edit Profile</h2>
+            
+            <form id="editProfileForm" class="space-y-4">
+                <div>
+                    <label for="newDisplayName" class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                    <input type="text" id="newDisplayName" 
+                           class="w-full px-4 py-3 border rounded-lg focus:border-blue-500 focus:outline-none" 
+                           placeholder="Enter your name" 
+                           value="${currentUser.displayName || ''}" 
+                           required />
+                    <p class="text-sm text-gray-500 mt-1">This name will be updated across all chores and messages.</p>
+                </div>
+                
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        Update Name
+                    </button>
+                    <button type="button" id="cancelEditProfile" class="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    const newDisplayNameInput = document.getElementById('newDisplayName');
+    setTimeout(() => newDisplayNameInput.focus(), 100);
+
+    // Add event listeners
+    document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newName = newDisplayNameInput.value.trim();
+
+        if (!newName) {
+            showNotification('❌ Please enter a valid name.');
+            return;
+        }
+
+        if (newName === currentUser.displayName) {
+            showNotification('ℹ️ No changes to save.');
+            modal.remove();
+            document.body.style.overflow = '';
+            return;
+        }
+
+        // Disable form while updating
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Updating...';
+
+        try {
+            await updateUserName(newName);
+            modal.remove();
+            document.body.style.overflow = '';
+            showNotification('✅ Profile updated successfully!');
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            showNotification('❌ Failed to update profile. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Update Name';
+        }
+    });
+
+    document.getElementById('cancelEditProfile').addEventListener('click', () => {
+        modal.remove();
+        document.body.style.overflow = '';
+    });
+}
+
+async function updateUserName(newName) {
+    if (!currentUser || !currentHousehold) {
+        throw new Error('User must be logged in and part of a household');
+    }
+
+    const oldName = currentUser.displayName;
+    const userId = currentUser.uid;
+
+    try {
+        // 1. Update Firebase Auth profile
+        await currentUser.updateProfile({
+            displayName: newName
+        });
+
+        // 2. Update user document in Firestore
+        await db.collection('users').doc(userId).update({
+            displayName: newName
+        });
+
+        // 3. Update household member details
+        await db.collection('households').doc(currentHousehold.id).update({
+            [`memberDetails.${userId}.displayName`]: newName
+        });
+
+        // 4. Update all chores created by this user
+        const choresQuery = await db.collection('chores')
+            .where('householdId', '==', currentHousehold.id)
+            .where('createdBy', '==', userId)
+            .get();
+
+        const choreUpdates = [];
+        choresQuery.docs.forEach(doc => {
+            choreUpdates.push(
+                db.collection('chores').doc(doc.id).update({
+                    createdByName: newName
+                })
+            );
+        });
+
+        // 5. Update all chores completed by this user
+        const completedChoresQuery = await db.collection('chores')
+            .where('householdId', '==', currentHousehold.id)
+            .where('completedBy', '==', userId)
+            .get();
+
+        completedChoresQuery.docs.forEach(doc => {
+            choreUpdates.push(
+                db.collection('chores').doc(doc.id).update({
+                    completedByName: newName
+                })
+            );
+        });
+
+        // 6. Update all chores assigned to this user (by name)
+        if (oldName) {
+            const assignedChoresQuery = await db.collection('chores')
+                .where('householdId', '==', currentHousehold.id)
+                .where('assignee', '==', oldName)
+                .get();
+
+            assignedChoresQuery.docs.forEach(doc => {
+                choreUpdates.push(
+                    db.collection('chores').doc(doc.id).update({
+                        assignee: newName
+                    })
+                );
+            });
+        }
+
+        // 7. Update all messages authored by this user
+        const messagesQuery = await db.collection('messages')
+            .where('householdId', '==', currentHousehold.id)
+            .where('authorId', '==', userId)
+            .get();
+
+        const messageUpdates = [];
+        messagesQuery.docs.forEach(doc => {
+            messageUpdates.push(
+                db.collection('messages').doc(doc.id).update({
+                    author: newName
+                })
+            );
+        });
+
+        // Execute all updates
+        await Promise.all([...choreUpdates, ...messageUpdates]);
+
+        // Update local current user object
+        // Note: Firebase Auth automatically updates currentUser.displayName after updateProfile
+
+        // Update local household data
+        if (currentHousehold.memberDetails && currentHousehold.memberDetails[userId]) {
+            currentHousehold.memberDetails[userId].displayName = newName;
+        }
+
+        // Refresh household members dropdown
+        updateHouseholdMembers();
+
+        // Refresh UI components that show user names
+        updateUIForAuth();
+
+    } catch (error) {
+        console.error('Error in updateUserName:', error);
+        throw error;
+    }
 }
