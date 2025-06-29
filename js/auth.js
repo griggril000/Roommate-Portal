@@ -44,11 +44,11 @@ const authModule = {
 
         // Main sign-in buttons (show modal)
         if (elements.signInButton) {
-            elements.signInButton.addEventListener('click', this.showLoginModal);
+            elements.signInButton.addEventListener('click', this.showLoginModal.bind(this));
         }
 
         if (elements.signInButtonMobile) {
-            elements.signInButtonMobile.addEventListener('click', this.showLoginModal);
+            elements.signInButtonMobile.addEventListener('click', this.showLoginModal.bind(this));
         }
 
         // Initialize modal sign-in buttons
@@ -60,11 +60,11 @@ const authModule = {
             elements.setEmailSignInButton(emailSignInButton);
 
             if (googleSignInButton) {
-                googleSignInButton.addEventListener('click', this.signInWithGoogle);
+                googleSignInButton.addEventListener('click', this.signInWithGoogle.bind(this));
             }
 
             if (emailSignInButton) {
-                emailSignInButton.addEventListener('click', this.showEmailSignInForm);
+                emailSignInButton.addEventListener('click', this.showEmailSignInForm.bind(this));
             }
         }, 100);
     },
@@ -95,8 +95,15 @@ const authModule = {
             const result = await auth.signInWithPopup(provider);
 
             window.RoommatePortal.state.setCurrentUser(result.user);
-            window.RoommatePortal.utils.showNotification('🎉 Successfully signed in with Google!');
-            window.RoommatePortal.auth.hideLoginModal();
+
+            // Check if we need to collect the user's name
+            if (!result.user.displayName || result.user.displayName.trim() === '') {
+                await this.promptForUserName();
+            }
+
+            this.hideLoginModal();
+            window.RoommatePortal.ui.updateUIForAuth();
+            window.RoommatePortal.utils.showNotification(`👋 Welcome, ${result.user.displayName || result.user.email}!`);
         } catch (error) {
             console.error('Error during Google sign-in:', error);
             window.RoommatePortal.utils.showNotification('❌ Failed to sign in with Google. Please try again.');
@@ -105,9 +112,160 @@ const authModule = {
 
     // Show email sign-in form
     showEmailSignInForm() {
-        // Implementation for email sign-in form would go here
-        // This is a simplified version - full implementation would include form handling
-        window.RoommatePortal.utils.showNotification('📧 Email sign-in form would appear here');
+        const loginModal = document.getElementById('loginModal');
+        if (!loginModal) return;
+
+        loginModal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Sign In with Email</h2>
+                <form id="emailLoginForm" class="space-y-4">
+                    <input type="email" id="emailInput" class="w-full px-4 py-2 border rounded-lg" placeholder="Email" required />
+                    <input type="password" id="passwordInput" class="w-full px-4 py-2 border rounded-lg" placeholder="Password" required />
+                    <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">Sign In</button>
+                </form>
+                <div class="text-sm text-center mt-4">
+                    <button id="showSignUp" class="text-blue-600 hover:underline">Create an account</button>
+                    <span class="mx-2">|</span>
+                    <button id="showResetPassword" class="text-blue-600 hover:underline">Forgot password?</button>
+                </div>
+            </div>
+        `;
+
+        // Set up email login form
+        const emailLoginForm = document.getElementById('emailLoginForm');
+        emailLoginForm.addEventListener('submit', this.handleEmailSignIn.bind(this));
+
+        // Set up navigation buttons
+        document.getElementById('showSignUp').addEventListener('click', this.showSignUpForm.bind(this));
+        document.getElementById('showResetPassword').addEventListener('click', this.showResetPasswordForm.bind(this));
+    },
+
+    // Handle email sign-in
+    async handleEmailSignIn(e) {
+        e.preventDefault();
+        const email = document.getElementById('emailInput').value;
+        const password = document.getElementById('passwordInput').value;
+
+        try {
+            const { auth } = window.RoommatePortal.config;
+            const result = await auth.signInWithEmailAndPassword(email, password);
+            const currentUser = result.user;
+
+            window.RoommatePortal.state.setCurrentUser(currentUser);
+
+            // Check if we need to collect the user's name
+            if (!currentUser.displayName || currentUser.displayName.trim() === '') {
+                await this.promptForUserName();
+            }
+
+            this.hideLoginModal();
+            window.RoommatePortal.ui.updateUIForAuth();
+            window.RoommatePortal.utils.showNotification(`👋 Welcome, ${currentUser.displayName || currentUser.email}!`);
+        } catch (error) {
+            console.error('Error during email sign-in:', error);
+            window.RoommatePortal.utils.showNotification('❌ Email sign-in failed. Please check your credentials.');
+        }
+    },
+
+    // Show sign-up form
+    showSignUpForm() {
+        const loginModal = document.getElementById('loginModal');
+        if (!loginModal) return;
+
+        loginModal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Sign Up</h2>
+                <form id="signUpForm" class="space-y-4">
+                    <input type="text" id="signUpName" class="w-full px-4 py-2 border rounded-lg" placeholder="Your Name" required />
+                    <input type="email" id="signUpEmail" class="w-full px-4 py-2 border rounded-lg" placeholder="Email" required />
+                    <input type="password" id="signUpPassword" class="w-full px-4 py-2 border rounded-lg" placeholder="Password" required />
+                    <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">Sign Up</button>
+                </form>
+                <div class="text-sm text-center mt-4">
+                    <button id="backToSignIn" class="text-blue-600 hover:underline">Back to Sign In</button>
+                </div>
+            </div>
+        `;
+
+        // Set up sign-up form
+        const signUpForm = document.getElementById('signUpForm');
+        signUpForm.addEventListener('submit', this.handleSignUp.bind(this));
+
+        // Set up back button
+        document.getElementById('backToSignIn').addEventListener('click', this.showEmailSignInForm.bind(this));
+    },
+
+    // Handle sign-up
+    async handleSignUp(e) {
+        e.preventDefault();
+        const name = document.getElementById('signUpName').value.trim();
+        const email = document.getElementById('signUpEmail').value;
+        const password = document.getElementById('signUpPassword').value;
+
+        if (!name) {
+            window.RoommatePortal.utils.showNotification('❌ Please enter your name.');
+            return;
+        }
+
+        try {
+            const { auth } = window.RoommatePortal.config;
+            const result = await auth.createUserWithEmailAndPassword(email, password);
+
+            // Update the user's profile with their name
+            await result.user.updateProfile({
+                displayName: name
+            });
+
+            window.RoommatePortal.state.setCurrentUser(result.user);
+            this.hideLoginModal();
+            window.RoommatePortal.ui.updateUIForAuth();
+            window.RoommatePortal.utils.showNotification(`🎉 Account created! Welcome, ${name}!`);
+        } catch (error) {
+            console.error('Error during sign-up:', error);
+            window.RoommatePortal.utils.showNotification('❌ Sign-up failed. Please try again.');
+        }
+    },
+
+    // Show reset password form
+    showResetPasswordForm() {
+        const loginModal = document.getElementById('loginModal');
+        if (!loginModal) return;
+
+        loginModal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Reset Password</h2>
+                <form id="resetPasswordForm" class="space-y-4">
+                    <input type="email" id="resetEmail" class="w-full px-4 py-2 border rounded-lg" placeholder="Email" required />
+                    <button type="submit" class="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors">Reset Password</button>
+                </form>
+                <div class="text-sm text-center mt-4">
+                    <button id="backToSignInFromReset" class="text-blue-600 hover:underline">Back to Sign In</button>
+                </div>
+            </div>
+        `;
+
+        // Set up reset password form
+        const resetPasswordForm = document.getElementById('resetPasswordForm');
+        resetPasswordForm.addEventListener('submit', this.handlePasswordReset.bind(this));
+
+        // Set up back button
+        document.getElementById('backToSignInFromReset').addEventListener('click', this.showEmailSignInForm.bind(this));
+    },
+
+    // Handle password reset
+    async handlePasswordReset(e) {
+        e.preventDefault();
+        const email = document.getElementById('resetEmail').value;
+
+        try {
+            const { auth } = window.RoommatePortal.config;
+            await auth.sendPasswordResetEmail(email);
+            window.RoommatePortal.utils.showNotification('📧 Password reset email sent! Check your inbox.');
+            this.showEmailSignInForm();
+        } catch (error) {
+            console.error('Error during password reset:', error);
+            window.RoommatePortal.utils.showNotification('❌ Failed to send password reset email. Please try again.');
+        }
     },
 
     // Show login modal
