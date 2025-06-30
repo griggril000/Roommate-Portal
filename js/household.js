@@ -175,7 +175,7 @@ const household = {
 
         try {
             // Generate a unique household code
-            const householdCode = window.RoommatePortal.utils.generateHouseholdCode();
+            const householdCode = await window.RoommatePortal.utils.generateHouseholdCode();
 
             // Create household document
             const householdData = {

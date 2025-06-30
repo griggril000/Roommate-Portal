@@ -39,13 +39,59 @@ const utils = {
     },
 
     // Generate unique household code
-    generateHouseholdCode() {
+    async generateHouseholdCode() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let result = '';
-        for (let i = 0; i < 6; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        const { db } = window.RoommatePortal.config;
+        let attempts = 0;
+        const maxAttempts = 10; // Prevent infinite loops
+
+        // Ensure database connection exists
+        if (!db) {
+            console.error('Database connection not available, generating random code without uniqueness check');
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
         }
-        return result;
+
+        while (attempts < maxAttempts) {
+            // Generate a random code
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            try {
+                // Check if this code already exists in the database
+                const existingHousehold = await db.collection('households')
+                    .where('code', '==', result)
+                    .limit(1)
+                    .get();
+
+                // If no household exists with this code, it's unique
+                if (existingHousehold.empty) {
+                    console.log(`Generated unique household code: ${result} (attempt ${attempts + 1})`);
+                    return result;
+                }
+
+                console.log(`Code ${result} already exists, trying again (attempt ${attempts + 1})`);
+                attempts++;
+            } catch (error) {
+                console.error('Error checking household code uniqueness:', error);
+                // If there's an error checking the database, return the generated code
+                // This prevents the function from failing completely
+                console.warn(`Database check failed, returning code without uniqueness verification: ${result}`);
+                return result;
+            }
+        }
+
+        // If we've tried maxAttempts times and still haven't found a unique code,
+        // add a timestamp suffix to ensure uniqueness
+        const timestamp = Date.now().toString(36).substring(0, 6).toUpperCase();
+        const fallbackCode = timestamp;
+        console.warn(`Could not generate unique household code after ${maxAttempts} attempts, using timestamp-based fallback: ${fallbackCode}`);
+        return fallbackCode;
     },
 
     // Clear localStorage
