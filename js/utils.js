@@ -29,13 +29,31 @@ const utils = {
         }, 4000);
     },
 
-    // Generate avatar emoji based on name
-    getAvatarEmoji(name) {
-        if (!name) return '👤';
+    // Generate avatar (Google profile picture or emoji fallback)
+    getAvatarEmoji(name, uid = null) {
+        // If UID is provided, try to get user's profile picture from household data
+        if (uid) {
+            const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+            if (currentHousehold && currentHousehold.memberDetails && currentHousehold.memberDetails[uid]) {
+                const member = currentHousehold.memberDetails[uid];
+                if (member.photoURL) {
+                    return `<img src="${member.photoURL}" alt="${member.displayName || 'User'}" class="w-8 h-8 rounded-full object-cover border-2 border-gray-200" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'" />
+                            <span style="display:none;" class="text-2xl">👤</span>`;
+                }
+            }
+        }
 
-        const emojis = ['👤', '🧑‍💼', '👩‍💼', '🧑‍🎓', '👩‍🎓', '🧑‍🔬', '👩‍🔬', '🧑‍🎨', '👩‍🎨', '🧑‍🍳', '👩‍🍳'];
-        const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        return emojis[hash % emojis.length];
+        // If no UID provided or no photo found, try to get current user's photo
+        if (!uid) {
+            const currentUser = window.RoommatePortal.state.getCurrentUser();
+            if (currentUser && currentUser.photoURL) {
+                return `<img src="${currentUser.photoURL}" alt="${currentUser.displayName || 'User'}" class="w-8 h-8 rounded-full object-cover border-2 border-gray-200" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'" />
+                        <span style="display:none;" class="text-2xl">👤</span>`;
+            }
+        }
+
+        // Fallback to default emoji
+        return '<span class="text-2xl">👤</span>';
     },
 
     // Generate unique household code

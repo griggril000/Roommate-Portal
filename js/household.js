@@ -189,6 +189,7 @@ const household = {
                     [currentUser.uid]: {
                         displayName: currentUser.displayName || currentUser.email,
                         email: currentUser.email,
+                        photoURL: currentUser.photoURL || null,
                         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
                         role: 'admin'
                     }
@@ -259,6 +260,7 @@ const household = {
                 [`memberDetails.${currentUser.uid}`]: {
                     displayName: currentUser.displayName || currentUser.email,
                     email: currentUser.email,
+                    photoURL: currentUser.photoURL || null,
                     joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     role: 'member'
                 }

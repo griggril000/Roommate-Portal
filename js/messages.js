@@ -136,14 +136,14 @@ const messagesModule = {
             messageElement.className = 'message-item animate-slide-in';
             messageElement.style.animationDelay = `${index * 0.1}s`;
 
-            const avatarEmoji = window.RoommatePortal.utils.getAvatarEmoji(message.author);
+            const avatarEmoji = window.RoommatePortal.utils.getAvatarEmoji(message.author, message.authorId);
             // Only check if it's own message if user is logged in
             const isOwnMessage = currentUser && message.authorId === currentUser.uid;
 
             messageElement.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex items-center space-x-2">
-                        <span class="text-2xl">${avatarEmoji}</span>
+                        ${avatarEmoji}
                         <span class="message-author">${message.author}</span>
                         ${!message.readBy || !message.readBy.includes(currentUser.uid) ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">NEW</span>' : ''}
                     </div>

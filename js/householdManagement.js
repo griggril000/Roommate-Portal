@@ -19,7 +19,7 @@ const householdManagement = {
             .map(([uid, member]) => `
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-3">
-                        <span class="text-2xl">${window.RoommatePortal.utils.getAvatarEmoji(member.displayName)}</span>
+                        ${window.RoommatePortal.utils.getAvatarEmoji(member.displayName, uid)}
                         <div>
                             <div class="flex items-center space-x-2">
                                 <p class="font-medium text-gray-800">${member.displayName}</p>
@@ -379,7 +379,8 @@ const householdManagement = {
 
             // 3. Update household member details
             await db.collection('households').doc(currentHousehold.id).update({
-                [`memberDetails.${userId}.displayName`]: newName
+                [`memberDetails.${userId}.displayName`]: newName,
+                [`memberDetails.${userId}.photoURL`]: currentUser.photoURL || null
             });
 
             // 4. Update all chores created by this user
@@ -448,6 +449,7 @@ const householdManagement = {
             // Update local household data
             if (currentHousehold.memberDetails && currentHousehold.memberDetails[userId]) {
                 currentHousehold.memberDetails[userId].displayName = newName;
+                currentHousehold.memberDetails[userId].photoURL = currentUser.photoURL || null;
             }
 
             // Refresh household members dropdown
