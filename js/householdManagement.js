@@ -76,8 +76,8 @@ const householdManagement = {
         document.body.style.overflow = 'hidden';
 
         // Add event listeners
-        document.getElementById('leaveHouseholdBtn').addEventListener('click', this.leaveHousehold.bind(this));
-        document.getElementById('deleteAccountBtn').addEventListener('click', this.deleteUserAccount.bind(this));
+        document.getElementById('leaveHouseholdBtn').addEventListener('click', window.RoommatePortal.householdManagement.leaveHousehold.bind(window.RoommatePortal.householdManagement));
+        document.getElementById('deleteAccountBtn').addEventListener('click', window.RoommatePortal.householdManagement.deleteUserAccount.bind(window.RoommatePortal.householdManagement));
         document.getElementById('closeHouseholdManagementBtn').addEventListener('click', () => {
             modal.remove();
             document.body.style.overflow = '';
@@ -330,7 +330,7 @@ const householdManagement = {
             }
 
             try {
-                await this.updateUserName(newName);
+                await window.RoommatePortal.householdManagement.updateUserName(newName);
                 modal.remove();
                 document.body.style.overflow = '';
                 window.RoommatePortal.utils.showNotification('✅ Your name has been updated successfully!');
@@ -339,7 +339,7 @@ const householdManagement = {
                 const householdModal = document.getElementById('householdManagementModal');
                 if (householdModal) {
                     householdModal.remove();
-                    this.showHouseholdManagement();
+                    window.RoommatePortal.householdManagement.showHouseholdManagement();
                 }
             } catch (error) {
                 console.error('Error updating name:', error);

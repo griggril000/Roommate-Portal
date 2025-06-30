@@ -177,11 +177,11 @@ const ui = {
         const elements = window.RoommatePortal.state.elements;
 
         if (elements.householdManagementBtn) {
-            elements.householdManagementBtn.addEventListener('click', window.RoommatePortal.householdManagement.showHouseholdManagement);
+            elements.householdManagementBtn.addEventListener('click', window.RoommatePortal.householdManagement.showHouseholdManagement.bind(window.RoommatePortal.householdManagement));
         }
 
         if (elements.householdManagementBtnMobile) {
-            elements.householdManagementBtnMobile.addEventListener('click', window.RoommatePortal.householdManagement.showHouseholdManagement);
+            elements.householdManagementBtnMobile.addEventListener('click', window.RoommatePortal.householdManagement.showHouseholdManagement.bind(window.RoommatePortal.householdManagement));
         }
     }
 };
