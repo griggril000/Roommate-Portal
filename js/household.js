@@ -114,7 +114,7 @@ const household = {
         // Add event listeners
         document.getElementById('createHouseholdBtn').addEventListener('click', this.showCreateHouseholdForm.bind(this));
         document.getElementById('joinHouseholdBtn').addEventListener('click', this.showJoinHouseholdForm.bind(this));
-        
+
         // Account management event listeners
         document.getElementById('logoutFromHouseholdModal').addEventListener('click', this.handleLogoutFromModal.bind(this));
         document.getElementById('deleteAccountFromHouseholdModal').addEventListener('click', this.handleDeleteAccountFromModal.bind(this));
@@ -160,7 +160,7 @@ const household = {
             this.createHouseholdModal();
             this.showHouseholdModal();
         });
-        
+
         // Account management event listeners for create form
         document.getElementById('logoutFromCreateForm').addEventListener('click', this.handleLogoutFromModal.bind(this));
         document.getElementById('deleteAccountFromCreateForm').addEventListener('click', this.handleDeleteAccountFromModal.bind(this));
@@ -205,7 +205,7 @@ const household = {
             this.createHouseholdModal();
             this.showHouseholdModal();
         });
-        
+
         // Account management event listeners for join form
         document.getElementById('logoutFromJoinForm').addEventListener('click', this.handleLogoutFromModal.bind(this));
         document.getElementById('deleteAccountFromJoinForm').addEventListener('click', this.handleDeleteAccountFromModal.bind(this));
@@ -338,13 +338,13 @@ const household = {
     // Handle logout from household modal
     async handleLogoutFromModal() {
         const { auth } = window.RoommatePortal.config;
-        
+
         try {
             await auth.signOut();
-            
+
             // Hide the household modal
             this.hideHouseholdModal();
-            
+
             window.RoommatePortal.utils.showNotification('👋 You have been logged out successfully.');
         } catch (error) {
             console.error('Error signing out:', error);
@@ -356,7 +356,7 @@ const household = {
     async handleDeleteAccountFromModal() {
         // Close the household modal first
         this.hideHouseholdModal();
-        
+
         // Use the existing delete account functionality
         await window.RoommatePortal.householdManagement.deleteUserAccount();
     },
