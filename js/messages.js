@@ -19,7 +19,7 @@ const messagesModule = {
     },
 
     // Handle post message form submission
-    async handlePostMessage(e) {
+    handlePostMessage(e) {
         e.preventDefault();
 
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
@@ -35,40 +35,28 @@ const messagesModule = {
         const messageText = elements.messageInput.value.trim();
 
         if (author && messageText) {
-            try {
-                // Initialize encryption if not already done
-                await window.RoommatePortal.encryption.initializeHouseholdEncryption(currentHousehold.id);
-                
-                // Encrypt the message text
-                const encryptedText = await window.RoommatePortal.encryption.encryptMessage(messageText, currentHousehold.id);
-                
-                const message = {
-                    author: author, // Author name is not encrypted for display purposes
-                    text: encryptedText, // This is now encrypted
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    householdId: currentHousehold.id,
-                    authorId: currentUser.uid,
-                    // Track which users have read this message (author has read it by default)
-                    readBy: [currentUser.uid],
-                    encrypted: true // Flag to indicate this message is encrypted
-                };
+            const message = {
+                author: author,
+                text: messageText,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                householdId: currentHousehold.id,
+                authorId: currentUser.uid,
+                // Track which users have read this message (author has read it by default)
+                readBy: [currentUser.uid]
+            };
 
-                // Add to Firestore
-                const { db } = window.RoommatePortal.config;
-                db.collection('messages').add(message)
-                    .then(() => {
-                        // Clear message input but keep author name
-                        elements.messageInput.value = '';
-                        window.RoommatePortal.utils.showNotification('📝 Message posted successfully! 🔒');
-                    })
-                    .catch(error => {
-                        console.error('Error posting message:', error);
-                        window.RoommatePortal.utils.showNotification('❌ Failed to post message. Please try again.');
-                    });
-            } catch (error) {
-                console.error('Error encrypting message:', error);
-                window.RoommatePortal.utils.showNotification('❌ Failed to encrypt message. Please try again.');
-            }
+            // Add to Firestore
+            const { db } = window.RoommatePortal.config;
+            db.collection('messages').add(message)
+                .then(() => {
+                    // Clear message input but keep author name
+                    elements.messageInput.value = '';
+                    window.RoommatePortal.utils.showNotification('📝 Message posted successfully!');
+                })
+                .catch(error => {
+                    console.error('Error posting message:', error);
+                    window.RoommatePortal.utils.showNotification('❌ Failed to post message. Please try again.');
+                });
         }
     },
 
@@ -118,7 +106,7 @@ const messagesModule = {
     },
 
     // Load and display messages
-    async loadMessages() {
+    loadMessages() {
         const elements = window.RoommatePortal.state.elements;
         const messagesList = window.RoommatePortal.state.getMessages();
         const currentUser = window.RoommatePortal.state.getCurrentUser();
@@ -143,17 +131,7 @@ const messagesModule = {
             return;
         }
 
-        // Initialize encryption for the household if needed
-        if (currentHousehold) {
-            try {
-                await window.RoommatePortal.encryption.initializeHouseholdEncryption(currentHousehold.id);
-            } catch (error) {
-                console.error('Error initializing encryption:', error);
-            }
-        }
-
-        for (let index = 0; index < messagesList.length; index++) {
-            const message = messagesList[index];
+        messagesList.forEach((message, index) => {
             const messageElement = document.createElement('div');
             messageElement.className = 'message-item animate-slide-in';
             messageElement.style.animationDelay = `${index * 0.1}s`;
@@ -162,23 +140,11 @@ const messagesModule = {
             // Only check if it's own message if user is logged in
             const isOwnMessage = currentUser && message.authorId === currentUser.uid;
 
-            // Decrypt message text if it's encrypted
-            let displayText = message.text;
-            if (message.encrypted && currentHousehold) {
-                try {
-                    displayText = await window.RoommatePortal.encryption.decryptMessage(message.text, currentHousehold.id);
-                } catch (error) {
-                    console.error('Error decrypting message:', error);
-                    displayText = '[Unable to decrypt message] 🔒';
-                }
-            }
-
             messageElement.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex items-center space-x-2">
                         ${avatarEmoji}
                         <span class="message-author">${message.author}</span>
-                        ${message.encrypted ? '<span class="text-green-500 text-xs">🔒</span>' : ''}
                         ${!message.readBy || !message.readBy.includes(currentUser.uid) ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">NEW</span>' : ''}
                     </div>
                     <div class="flex items-center space-x-3">
@@ -188,11 +154,11 @@ const messagesModule = {
                         </button>` : ''}
                     </div>
                 </div>
-                <p class="message-text">${displayText}</p>
+                <p class="message-text">${message.text}</p>
             `;
 
             elements.messageList.appendChild(messageElement);
-        }
+        });
     },
 
     // Delete message
