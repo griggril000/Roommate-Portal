@@ -28,12 +28,22 @@ const authModule = {
                     }
                 }
 
+                // Dispatch auth state change event for notifications
+                window.dispatchEvent(new CustomEvent('roommatePortal:authStateChange', {
+                    detail: { user: user }
+                }));
+
                 window.RoommatePortal.household.checkUserHousehold();
             } else {
                 window.RoommatePortal.state.setCurrentUser(null);
                 window.RoommatePortal.state.setCurrentHousehold(null);
                 window.RoommatePortal.dataCleanup.cleanupData();
                 window.RoommatePortal.ui.updateUIForAuth();
+
+                // Dispatch auth state change event for notifications
+                window.dispatchEvent(new CustomEvent('roommatePortal:authStateChange', {
+                    detail: { user: null }
+                }));
             }
         });
     },

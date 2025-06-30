@@ -96,6 +96,10 @@ const ui = {
             household: {
                 desktop: document.getElementById('householdManagementBtn'),
                 mobile: document.getElementById('householdManagementBtnMobile')
+            },
+            notification: {
+                desktop: document.getElementById('notificationToggleBtn'),
+                mobile: document.getElementById('notificationToggleBtnMobile')
             }
         };
 
@@ -112,6 +116,104 @@ const ui = {
         Object.values(buttons.household).forEach(btn => {
             if (btn) btn.classList.toggle('hidden', !isSignedIn || !hasHousehold);
         });
+
+        // Update notification buttons (show only when signed in and has household)
+        Object.values(buttons.notification).forEach(btn => {
+            if (btn) btn.classList.toggle('hidden', !isSignedIn || !hasHousehold);
+        });
+
+        // Update notification button appearance based on current status
+        if (isSignedIn && hasHousehold) {
+            this.updateNotificationButtons();
+        }
+    },
+
+    // Update notification button appearance
+    updateNotificationButtons() {
+        if (!window.RoommatePortal.notifications) return;
+
+        const status = window.RoommatePortal.notifications.getStatus();
+        const elements = window.RoommatePortal.state.elements;
+
+        const desktopBtn = elements.notificationToggleBtn;
+        const mobileBtn = elements.notificationToggleBtnMobile;
+        const desktopText = elements.notificationToggleText;
+        const mobileText = elements.notificationToggleTextMobile;
+
+        // Update button appearance based on status
+        [desktopBtn, mobileBtn].forEach(btn => {
+            if (!btn) return;
+
+            // Remove all color classes
+            btn.className = btn.className.replace(/bg-\w+-\d+/g, '').replace(/hover:bg-\w+-\d+/g, '');
+
+            if (!status.supported) {
+                // Browser doesn't support notifications
+                btn.className += ' bg-gray-400 hover:bg-gray-500';
+                btn.disabled = true;
+                btn.title = 'Notifications not supported by this browser';
+            } else if (status.permission === 'denied') {
+                // Permission denied
+                btn.className += ' bg-red-600 hover:bg-red-700';
+                btn.disabled = false;
+                btn.title = 'Notifications blocked - click to re-enable in browser settings';
+            } else if (status.enabled) {
+                // Notifications enabled
+                btn.className += ' bg-green-600 hover:bg-green-700';
+                btn.disabled = false;
+                btn.title = 'Notifications enabled - click to disable';
+            } else {
+                // Notifications available but not enabled
+                btn.className += ' bg-yellow-600 hover:bg-yellow-700';
+                btn.disabled = false;
+                btn.title = 'Click to enable message notifications';
+            }
+        });
+
+        // Update button text
+        if (desktopText) {
+            if (!status.supported) {
+                desktopText.textContent = 'N/A';
+            } else if (status.permission === 'denied') {
+                desktopText.textContent = 'Blocked';
+            } else if (status.enabled) {
+                desktopText.textContent = 'On';
+            } else {
+                desktopText.textContent = 'Off';
+            }
+        }
+
+        if (mobileText) {
+            if (!status.supported) {
+                mobileText.textContent = 'Notifications Not Supported';
+            } else if (status.permission === 'denied') {
+                mobileText.textContent = 'Notifications Blocked';
+            } else if (status.enabled) {
+                mobileText.textContent = 'Notifications Enabled';
+            } else {
+                mobileText.textContent = 'Enable Notifications';
+            }
+        }
+    },
+
+    // Setup notification toggle buttons
+    setupNotificationButtons() {
+        const elements = window.RoommatePortal.state.elements;
+
+        const handleNotificationToggle = async () => {
+            if (window.RoommatePortal.notifications) {
+                await window.RoommatePortal.notifications.toggleNotifications();
+                this.updateNotificationButtons();
+            }
+        };
+
+        if (elements.notificationToggleBtn) {
+            elements.notificationToggleBtn.addEventListener('click', handleNotificationToggle);
+        }
+
+        if (elements.notificationToggleBtnMobile) {
+            elements.notificationToggleBtnMobile.addEventListener('click', handleNotificationToggle);
+        }
     },
 
     // Initialize UI

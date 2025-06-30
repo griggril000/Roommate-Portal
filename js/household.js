@@ -20,6 +20,12 @@ const household = {
                 if (householdDoc.exists) {
                     const householdData = { id: householdDoc.id, ...householdDoc.data() };
                     window.RoommatePortal.state.setCurrentHousehold(householdData);
+
+                    // Dispatch household change event for notifications
+                    window.dispatchEvent(new CustomEvent('roommatePortal:householdChange', {
+                        detail: { household: householdData }
+                    }));
+
                     window.RoommatePortal.ui.updateUIForAuth();
                     this.loadHouseholdData();
                 } else {
@@ -256,6 +262,12 @@ const household = {
 
             const household = { id: householdRef.id, ...householdData };
             window.RoommatePortal.state.setCurrentHousehold(household);
+
+            // Dispatch household change event for notifications
+            window.dispatchEvent(new CustomEvent('roommatePortal:householdChange', {
+                detail: { household: household }
+            }));
+
             this.hideHouseholdModal();
             window.RoommatePortal.ui.updateUIForAuth();
             this.loadHouseholdData();
@@ -297,6 +309,12 @@ const household = {
                 window.RoommatePortal.utils.showNotification('ℹ️ You are already a member of this household.');
                 const household = { id: householdDoc.id, ...householdData };
                 window.RoommatePortal.state.setCurrentHousehold(household);
+
+                // Dispatch household change event for notifications
+                window.dispatchEvent(new CustomEvent('roommatePortal:householdChange', {
+                    detail: { household: household }
+                }));
+
                 this.hideHouseholdModal();
                 window.RoommatePortal.ui.updateUIForAuth();
                 this.loadHouseholdData();
@@ -324,6 +342,12 @@ const household = {
 
             const household = { id: householdDoc.id, ...householdData };
             window.RoommatePortal.state.setCurrentHousehold(household);
+
+            // Dispatch household change event for notifications
+            window.dispatchEvent(new CustomEvent('roommatePortal:householdChange', {
+                detail: { household: household }
+            }));
+
             this.hideHouseholdModal();
             window.RoommatePortal.ui.updateUIForAuth();
             this.loadHouseholdData();

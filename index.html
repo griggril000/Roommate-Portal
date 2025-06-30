@@ -53,6 +53,11 @@
 
                 <!-- Action Buttons Section (visible on desktop, hidden in mobile menu) -->
                 <div id="actionButtons" class="hidden md:flex items-center space-x-2">
+                    <button id="notificationToggleBtn"
+                        class="hidden px-3 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors text-sm"
+                        title="Toggle message notifications">
+                        <i class="fas fa-bell mr-1"></i><span id="notificationToggleText">Notify</span>
+                    </button>
                     <button id="householdManagementBtn"
                         class="hidden px-3 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm">
                         <i class="fas fa-cog mr-1"></i>Household
@@ -74,6 +79,11 @@
                         <span class="text-gray-500 font-medium text-sm">🏠 No household</span>
                     </div>
                     <div class="flex flex-col space-y-2">
+                        <button id="notificationToggleBtnMobile"
+                            class="hidden w-full px-3 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors text-sm">
+                            <i class="fas fa-bell mr-2"></i><span id="notificationToggleTextMobile">Enable
+                                Notifications</span>
+                        </button>
                         <button id="householdManagementBtnMobile"
                             class="hidden w-full px-3 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm">
                             <i class="fas fa-cog mr-2"></i>Household
@@ -264,6 +274,7 @@
     <script src="js/household.js"></script>
     <script src="js/chores.js"></script>
     <script src="js/messages.js"></script>
+    <script src="js/notifications.js"></script>
     <script src="js/statistics.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/dataCleanup.js"></script>

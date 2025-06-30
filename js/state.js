@@ -35,10 +35,16 @@ const signInButton = document.getElementById('signInButton');
 const signOutButton = document.getElementById('signOutButton');
 const householdManagementBtn = document.getElementById('householdManagementBtn');
 
+// Notification buttons
+const notificationToggleBtn = document.getElementById('notificationToggleBtn');
+const notificationToggleText = document.getElementById('notificationToggleText');
+
 // Mobile buttons
 const signInButtonMobile = document.getElementById('signInButtonMobile');
 const signOutButtonMobile = document.getElementById('signOutButtonMobile');
 const householdManagementBtnMobile = document.getElementById('householdManagementBtnMobile');
+const notificationToggleBtnMobile = document.getElementById('notificationToggleBtnMobile');
+const notificationToggleTextMobile = document.getElementById('notificationToggleTextMobile');
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileMenu = document.getElementById('mobileMenu');
 
@@ -89,9 +95,13 @@ window.RoommatePortal.state = {
         signInButton,
         signOutButton,
         householdManagementBtn,
+        notificationToggleBtn,
+        notificationToggleText,
         signInButtonMobile,
         signOutButtonMobile,
         householdManagementBtnMobile,
+        notificationToggleBtnMobile,
+        notificationToggleTextMobile,
         mobileMenuBtn,
         mobileMenu,
         getGoogleSignInButton: () => googleSignInButton,

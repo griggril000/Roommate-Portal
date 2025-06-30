@@ -16,6 +16,30 @@ const messagesModule = {
         if (elements.postMessageForm) {
             elements.postMessageForm.addEventListener('submit', this.handlePostMessage.bind(this));
         }
+
+        // Setup auto mark-as-read when viewing messages
+        this.setupAutoMarkAsRead();
+    },
+
+    // Setup automatic mark as read when viewing messages
+    setupAutoMarkAsRead() {
+        // Listen for tab switches to messages
+        window.addEventListener('roommatePortal:tabSwitch', (event) => {
+            if (event.detail.tab === 'messages') {
+                // Delay slightly to ensure DOM is updated
+                setTimeout(() => this.markMessagesAsRead(), 500);
+            }
+        });
+
+        // Also mark as read when page becomes visible and messages tab is active
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                const messageSection = document.getElementById('messageSection');
+                if (messageSection && !messageSection.classList.contains('hidden')) {
+                    setTimeout(() => this.markMessagesAsRead(), 500);
+                }
+            }
+        });
     },
 
     // Handle post message form submission
