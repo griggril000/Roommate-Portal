@@ -93,6 +93,17 @@ const household = {
                         <button id="joinHouseholdBtn" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
                             <i class="fas fa-users mr-2"></i>Join Existing Household
                         </button>
+                        
+                        <!-- Account Management Section -->
+                        <div class="pt-4 border-t border-gray-200 space-y-2">
+                            <p class="text-sm text-gray-500 text-center">Account Options</p>
+                            <button id="logoutFromHouseholdModal" class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors text-sm">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </button>
+                            <button id="deleteAccountFromHouseholdModal" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors text-sm">
+                                <i class="fas fa-trash mr-2"></i>Delete Account
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -103,6 +114,10 @@ const household = {
         // Add event listeners
         document.getElementById('createHouseholdBtn').addEventListener('click', this.showCreateHouseholdForm.bind(this));
         document.getElementById('joinHouseholdBtn').addEventListener('click', this.showJoinHouseholdForm.bind(this));
+        
+        // Account management event listeners
+        document.getElementById('logoutFromHouseholdModal').addEventListener('click', this.handleLogoutFromModal.bind(this));
+        document.getElementById('deleteAccountFromHouseholdModal').addEventListener('click', this.handleDeleteAccountFromModal.bind(this));
     },
 
     // Show create household form
@@ -123,6 +138,19 @@ const household = {
                         </button>
                     </div>
                 </form>
+                
+                <!-- Account Management Section -->
+                <div class="pt-4 border-t border-gray-200 space-y-2">
+                    <p class="text-sm text-gray-500 text-center">Account Options</p>
+                    <div class="flex space-x-2">
+                        <button id="logoutFromCreateForm" class="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors text-sm">
+                            <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                        </button>
+                        <button id="deleteAccountFromCreateForm" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors text-sm">
+                            <i class="fas fa-trash mr-1"></i>Delete Account
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -132,6 +160,10 @@ const household = {
             this.createHouseholdModal();
             this.showHouseholdModal();
         });
+        
+        // Account management event listeners for create form
+        document.getElementById('logoutFromCreateForm').addEventListener('click', this.handleLogoutFromModal.bind(this));
+        document.getElementById('deleteAccountFromCreateForm').addEventListener('click', this.handleDeleteAccountFromModal.bind(this));
     },
 
     // Show join household form
@@ -151,6 +183,19 @@ const household = {
                         </button>
                     </div>
                 </form>
+                
+                <!-- Account Management Section -->
+                <div class="pt-4 border-t border-gray-200 space-y-2">
+                    <p class="text-sm text-gray-500 text-center">Account Options</p>
+                    <div class="flex space-x-2">
+                        <button id="logoutFromJoinForm" class="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors text-sm">
+                            <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                        </button>
+                        <button id="deleteAccountFromJoinForm" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors text-sm">
+                            <i class="fas fa-trash mr-1"></i>Delete Account
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -160,6 +205,10 @@ const household = {
             this.createHouseholdModal();
             this.showHouseholdModal();
         });
+        
+        // Account management event listeners for join form
+        document.getElementById('logoutFromJoinForm').addEventListener('click', this.handleLogoutFromModal.bind(this));
+        document.getElementById('deleteAccountFromJoinForm').addEventListener('click', this.handleDeleteAccountFromModal.bind(this));
     },
 
     // Handle create household
@@ -284,6 +333,32 @@ const household = {
             console.error('Error joining household:', error);
             window.RoommatePortal.utils.showNotification('❌ Failed to join household. Please try again.');
         }
+    },
+
+    // Handle logout from household modal
+    async handleLogoutFromModal() {
+        const { auth } = window.RoommatePortal.config;
+        
+        try {
+            await auth.signOut();
+            
+            // Hide the household modal
+            this.hideHouseholdModal();
+            
+            window.RoommatePortal.utils.showNotification('👋 You have been logged out successfully.');
+        } catch (error) {
+            console.error('Error signing out:', error);
+            window.RoommatePortal.utils.showNotification('❌ Failed to log out. Please try again.');
+        }
+    },
+
+    // Handle delete account from household modal
+    async handleDeleteAccountFromModal() {
+        // Close the household modal first
+        this.hideHouseholdModal();
+        
+        // Use the existing delete account functionality
+        await window.RoommatePortal.householdManagement.deleteUserAccount();
     },
 
     // Update household members dropdown
