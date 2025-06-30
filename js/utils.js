@@ -8,7 +8,7 @@ const utils = {
     showNotification(message) {
         // Create notification element
         const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+        notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
         notification.textContent = message;
 
         document.body.appendChild(notification);
