@@ -77,8 +77,15 @@ const notificationsModule = {
     restoreNotificationSettings() {
         // Always get the current browser permission state first
         if (this.checkBrowserSupport()) {
+            const previousPermission = this.state.permission;
             this.state.permission = Notification.permission;
             console.log('🔔 Current browser notification permission:', this.state.permission);
+
+            // If permission changed from previous state, reset the prompt flag
+            if (previousPermission !== 'default' && previousPermission !== this.state.permission) {
+                console.log('🔔 Permission state changed, resetting prompt flag');
+                localStorage.removeItem('roommatePortal_hasPromptedNotifications');
+            }
         } else {
             this.state.permission = 'unsupported';
         }
@@ -155,6 +162,71 @@ const notificationsModule = {
             if (window.RoommatePortal.ui && window.RoommatePortal.ui.updateNotificationButtons) {
                 window.RoommatePortal.ui.updateNotificationButtons();
             }
+        });
+
+        // Check for permission changes when user returns to the page
+        this.setupPermissionChangeDetection();
+    },
+
+    // Setup permission change detection on page focus/visibility
+    setupPermissionChangeDetection() {
+        if (!this.checkBrowserSupport()) return;
+
+        const checkPermissionChange = () => {
+            const currentBrowserPermission = Notification.permission;
+
+            if (currentBrowserPermission !== this.state.permission) {
+                console.log('🔔 Browser permission changed:', {
+                    previous: this.state.permission,
+                    current: currentBrowserPermission
+                });
+
+                // Reset prompt flag when permission changes
+                if (this.state.permission !== 'default') {
+                    console.log('🔔 Resetting prompt flag due to permission change');
+                    localStorage.removeItem('roommatePortal_hasPromptedNotifications');
+                }
+
+                // Update our state
+                this.state.permission = currentBrowserPermission;
+
+                // Update enabled state based on new permission
+                if (currentBrowserPermission !== 'granted' && this.state.isEnabled) {
+                    this.state.isEnabled = false;
+                    this.saveNotificationSettings();
+                    this.stopNotifications();
+                }
+
+                // Dispatch permission change event to update UI
+                window.dispatchEvent(new CustomEvent('roommatePortal:notificationPermissionChange', {
+                    detail: { permission: currentBrowserPermission }
+                }));
+
+                // If user granted permission and we have a household, offer to enable notifications
+                if (currentBrowserPermission === 'granted') {
+                    const currentUser = window.RoommatePortal.state.getCurrentUser();
+                    const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+
+                    if (currentUser && currentHousehold && !this.state.isEnabled) {
+                        // Small delay to let UI update
+                        setTimeout(() => {
+                            this.promptForInitialSetup();
+                        }, 1000);
+                    }
+                }
+            }
+        };
+
+        // Check when page becomes visible (user returns from another tab/app)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                checkPermissionChange();
+            }
+        });
+
+        // Check when window gains focus
+        window.addEventListener('focus', () => {
+            checkPermissionChange();
         });
     },
 
@@ -519,7 +591,14 @@ const notificationsModule = {
     getStatus() {
         // Always get fresh permission state from browser
         if (this.checkBrowserSupport()) {
+            const previousPermission = this.state.permission;
             this.state.permission = Notification.permission;
+
+            // If permission changed, reset prompt flag
+            if (previousPermission !== 'default' && previousPermission !== this.state.permission) {
+                console.log('🔔 Permission changed in getStatus, resetting prompt flag');
+                localStorage.removeItem('roommatePortal_hasPromptedNotifications');
+            }
         }
 
         return {
@@ -572,32 +651,96 @@ const notificationsModule = {
             return;
         }
 
-        console.log('🔔 Prompting user for notification permission...');
+        console.log('🔔 Showing notification permission modal...');
 
         // Delay the prompt slightly to let the UI settle
-        setTimeout(async () => {
-            const shouldPrompt = confirm(
-                '🔔 Would you like to enable notifications for new roommate messages?\n\n' +
-                'This will help you stay updated when your roommates post new messages.\n\n' +
-                'Click OK to enable notifications, or Cancel to skip.'
-            );
+        setTimeout(() => {
+            this.showNotificationPermissionModal();
+        }, 2000); // 2 second delay
+    },
+
+    // Show custom modal for notification permission
+    showNotificationPermissionModal() {
+        // Create modal backdrop
+        const modalBackdrop = document.createElement('div');
+        modalBackdrop.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modalBackdrop.style.zIndex = '10000';
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.className = 'bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl';
+
+        modal.innerHTML = `
+            <div class="text-center">
+                <div class="mb-4">
+                    <div class="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-bell text-yellow-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Enable Message Notifications?</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        Stay updated when your roommates post new messages. We'll send you browser notifications so you never miss important updates.
+                    </p>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button id="notificationModalCancel" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        Not Now
+                    </button>
+                    <button id="notificationModalOk" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        Enable Notifications
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modalBackdrop.appendChild(modal);
+        document.body.appendChild(modalBackdrop);
+
+        // Handle button clicks
+        const cancelBtn = modal.querySelector('#notificationModalCancel');
+        const okBtn = modal.querySelector('#notificationModalOk');
+
+        const closeModal = () => {
+            document.body.removeChild(modalBackdrop);
+            document.body.style.overflow = '';
+        };
+
+        cancelBtn.addEventListener('click', () => {
+            console.log('🔔 User declined to enable notifications');
 
             // Mark that we've prompted this user
             localStorage.setItem('roommatePortal_hasPromptedNotifications', 'true');
 
-            if (shouldPrompt) {
-                console.log('🔔 User agreed to enable notifications');
-                const success = await this.requestPermission();
+            closeModal();
+            window.RoommatePortal.utils.showNotification('ℹ️ You can enable notifications later using the bell button in the header.');
+        });
 
-                // Update UI buttons to reflect the new state
-                if (window.RoommatePortal.ui && window.RoommatePortal.ui.updateNotificationButtons) {
-                    window.RoommatePortal.ui.updateNotificationButtons();
-                }
-            } else {
-                console.log('🔔 User declined to enable notifications');
-                window.RoommatePortal.utils.showNotification('ℹ️ You can enable notifications later using the bell button in the header.');
+        okBtn.addEventListener('click', async () => {
+            console.log('🔔 User agreed to enable notifications');
+
+            // Mark that we've prompted this user
+            localStorage.setItem('roommatePortal_hasPromptedNotifications', 'true');
+
+            closeModal();
+
+            // Now request browser permission
+            const success = await this.requestPermission();
+
+            // Update UI buttons to reflect the new state
+            if (window.RoommatePortal.ui && window.RoommatePortal.ui.updateNotificationButtons) {
+                window.RoommatePortal.ui.updateNotificationButtons();
             }
-        }, 2000); // 2 second delay
+        });
+
+        // Close modal when clicking backdrop
+        modalBackdrop.addEventListener('click', (e) => {
+            if (e.target === modalBackdrop) {
+                cancelBtn.click();
+            }
+        });
+
+        // Prevent body scroll while modal is open
+        document.body.style.overflow = 'hidden';
     },
 };
 
