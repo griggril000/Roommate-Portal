@@ -59,6 +59,7 @@ const household = {
 
             window.RoommatePortal.chores.loadChoresFromFirestore();
             window.RoommatePortal.messages.loadMessagesFromFirestore();
+            window.RoommatePortal.announcements.loadAnnouncements();
             this.updateHouseholdMembers();
         }
     },

@@ -10,10 +10,12 @@ let currentHousehold = null;
 let userHouseholds = [];
 let chores = JSON.parse(localStorage.getItem('roommatePortal_chores')) || [];
 let messages = JSON.parse(localStorage.getItem('roommatePortal_messages')) || [];
+let announcements = JSON.parse(localStorage.getItem('roommatePortal_announcements')) || [];
 
 // Firestore listeners (to manage cleanup)
 let choresListener = null;
 let messagesListener = null;
+let announcementsListener = null;
 
 // DOM elements - Core
 const choreInput = document.getElementById('choreInput');
@@ -24,11 +26,17 @@ const authorInput = document.getElementById('authorInput');
 const messageInput = document.getElementById('messageInput');
 const postMessageForm = document.getElementById('postMessageForm');
 const messageList = document.getElementById('messageList');
+const announcementTitleInput = document.getElementById('announcementTitleInput');
+const announcementBodyInput = document.getElementById('announcementBodyInput');
+const announcementExpirationInput = document.getElementById('announcementExpirationInput');
+const postAnnouncementForm = document.getElementById('postAnnouncementForm');
+const announcementList = document.getElementById('announcementList');
 
 // Statistics elements
 const activeChoresCount = document.getElementById('activeChoresCount');
 const completedTodayCount = document.getElementById('completedTodayCount');
 const newMessagesCount = document.getElementById('newMessagesCount');
+const activeAnnouncementsCount = document.getElementById('activeAnnouncementsCount');
 
 // Authentication buttons
 const signInButton = document.getElementById('signInButton');
@@ -72,12 +80,18 @@ window.RoommatePortal.state = {
     getMessages: () => messages,
     setMessages: (messageList) => { messages = messageList; },
 
+    getAnnouncements: () => announcements,
+    setAnnouncements: (announcementList) => { announcements = announcementList; },
+
     // Listeners
     getChoresListener: () => choresListener,
     setChoresListener: (listener) => { choresListener = listener; },
 
     getMessagesListener: () => messagesListener,
     setMessagesListener: (listener) => { messagesListener = listener; },
+
+    getAnnouncementsListener: () => announcementsListener,
+    setAnnouncementsListener: (listener) => { announcementsListener = listener; },
 
     // DOM elements
     elements: {
@@ -89,9 +103,15 @@ window.RoommatePortal.state = {
         messageInput,
         postMessageForm,
         messageList,
+        announcementTitleInput,
+        announcementBodyInput,
+        announcementExpirationInput,
+        postAnnouncementForm,
+        announcementList,
         activeChoresCount,
         completedTodayCount,
         newMessagesCount,
+        activeAnnouncementsCount,
         signInButton,
         signOutButton,
         householdManagementBtn,

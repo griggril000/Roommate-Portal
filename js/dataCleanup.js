@@ -9,6 +9,7 @@ const dataCleanup = {
         // Stop listening to Firestore
         const choresListener = window.RoommatePortal.state.getChoresListener();
         const messagesListener = window.RoommatePortal.state.getMessagesListener();
+        const announcementsListener = window.RoommatePortal.state.getAnnouncementsListener();
 
         if (choresListener) {
             choresListener();
@@ -20,9 +21,15 @@ const dataCleanup = {
             window.RoommatePortal.state.setMessagesListener(null);
         }
 
+        if (announcementsListener) {
+            announcementsListener();
+            window.RoommatePortal.state.setAnnouncementsListener(null);
+        }
+
         // Clear data arrays
         window.RoommatePortal.state.setChores([]);
         window.RoommatePortal.state.setMessages([]);
+        window.RoommatePortal.state.setAnnouncements([]);
 
         // Clear current user and household if logging out completely
         const currentUser = window.RoommatePortal.state.getCurrentUser();
@@ -38,11 +45,15 @@ const dataCleanup = {
         if (elements.messageList) {
             elements.messageList.innerHTML = '';
         }
+        if (elements.announcementList) {
+            elements.announcementList.innerHTML = '';
+        }
 
         // Reset statistics to zero
         if (elements.activeChoresCount) elements.activeChoresCount.textContent = '0';
         if (elements.completedTodayCount) elements.completedTodayCount.textContent = '0';
         if (elements.newMessagesCount) elements.newMessagesCount.textContent = '0';
+        if (elements.activeAnnouncementsCount) elements.activeAnnouncementsCount.textContent = '0';
 
         // Clear form inputs
         const chorePriority = document.getElementById('chorePriority');
@@ -55,10 +66,14 @@ const dataCleanup = {
             elements.authorInput.value = '';
             elements.authorInput.readOnly = false; // Make it editable again
         }
+        if (elements.announcementTitleInput) elements.announcementTitleInput.value = '';
+        if (elements.announcementBodyInput) elements.announcementBodyInput.value = '';
+        if (elements.announcementExpirationInput) elements.announcementExpirationInput.value = '';
 
         // Always update UI to show empty state, but don't hide main content
         window.RoommatePortal.chores.loadChores();
         window.RoommatePortal.messages.loadMessages();
+        window.RoommatePortal.announcements.displayAnnouncements([]);
         window.RoommatePortal.statistics.updateStatistics();
     },
 
@@ -86,6 +101,15 @@ const dataCleanup = {
                     .get();
 
                 userMessagesQuery.docs.forEach(doc => {
+                    deleteBatch.delete(doc.ref);
+                });
+
+                // Delete all announcements in the household
+                const allAnnouncementsQuery = await db.collection('announcements')
+                    .where('householdId', '==', householdId)
+                    .get();
+
+                allAnnouncementsQuery.docs.forEach(doc => {
                     deleteBatch.delete(doc.ref);
                 });
 
@@ -155,6 +179,16 @@ const dataCleanup = {
                     deleteBatch.delete(doc.ref);
                 });
 
+                // Delete all announcements posted by this user
+                const userAnnouncementsQuery = await db.collection('announcements')
+                    .where('householdId', '==', householdId)
+                    .where('authorId', '==', userId)
+                    .get();
+
+                userAnnouncementsQuery.docs.forEach(doc => {
+                    deleteBatch.delete(doc.ref);
+                });
+
                 // Commit all deletions
                 await deleteBatch.commit();
             }
@@ -196,6 +230,15 @@ const dataCleanup = {
                 .get();
 
             messagesQuery.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            // Delete all announcements in the household
+            const announcementsQuery = await db.collection('announcements')
+                .where('householdId', '==', householdId)
+                .get();
+
+            announcementsQuery.docs.forEach(doc => {
                 batch.delete(doc.ref);
             });
 

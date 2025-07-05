@@ -31,6 +31,7 @@ const appModule = {
             // Initialize chores and messages modules
             window.RoommatePortal.chores.init();
             window.RoommatePortal.messages.init();
+            window.RoommatePortal.announcements.init();
 
             // Initialize notifications module
             window.RoommatePortal.notifications.init();
@@ -49,6 +50,7 @@ const appModule = {
     setupTabHandlers() {
         const choresTab = document.getElementById('choresTab');
         const messagesTab = document.getElementById('messagesTab');
+        const announcementsTab = document.getElementById('announcementsTab');
 
         if (choresTab) {
             choresTab.addEventListener('click', () => {
@@ -66,6 +68,16 @@ const appModule = {
                 // Dispatch tab switch event for notifications
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'messages' }
+                }));
+            });
+        }
+
+        if (announcementsTab) {
+            announcementsTab.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('announcements');
+                // Dispatch tab switch event for notifications
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'announcements' }
                 }));
             });
         }

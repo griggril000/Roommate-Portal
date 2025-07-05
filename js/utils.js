@@ -187,21 +187,77 @@ const utils = {
     switchTab(tabName) {
         const choresTab = document.getElementById('choresTab');
         const messagesTab = document.getElementById('messagesTab');
+        const announcementsTab = document.getElementById('announcementsTab');
         const choreSection = document.getElementById('choreSection');
         const messageSection = document.getElementById('messageSection');
+        const announcementsSection = document.getElementById('announcementsSection');
 
+        // Reset all tabs to default state
+        choresTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+        messagesTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+        announcementsTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+
+        // Hide all sections
+        choreSection.className = "tab-content hidden";
+        messageSection.className = "tab-content hidden";
+        announcementsSection.className = "tab-content hidden";
+
+        // Show selected tab and section
         if (tabName === 'chores') {
-            choresTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm";
-            messagesTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+            choresTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm";
             choreSection.className = "tab-content";
-            messageSection.className = "tab-content hidden";
-        } else {
-            messagesTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 bg-purple-600 text-white shadow-sm";
-            choresTab.className = "flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+        } else if (tabName === 'messages') {
+            messagesTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-purple-600 text-white shadow-sm";
             messageSection.className = "tab-content";
-            choreSection.className = "tab-content hidden";
+        } else if (tabName === 'announcements') {
+            announcementsTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-orange-600 text-white shadow-sm";
+            announcementsSection.className = "tab-content";
         }
-    }
+
+        // Dispatch tab switch event for notification system
+        window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+            detail: { tab: tabName }
+        }));
+    },
+
+    // Escape HTML to prevent XSS attacks
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+
+    // Format date for display
+    formatDate(date) {
+        if (!date) return '';
+
+        const now = new Date();
+        const inputDate = new Date(date);
+
+        // Check if it's today
+        if (inputDate.toDateString() === now.toDateString()) {
+            return inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Check if it's yesterday
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (inputDate.toDateString() === yesterday.toDateString()) {
+            return `Yesterday ${inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        // Check if it's this week
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        if (inputDate > weekAgo) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return `${days[inputDate.getDay()]} ${inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        // For older dates, show full date
+        return inputDate.toLocaleDateString() + ' ' + inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    },
 };
 
 // Export utils to global namespace

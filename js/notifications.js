@@ -23,7 +23,9 @@ const notificationsModule = {
         retryCount: 0,
         currentBackoffTime: 30000,
         isTabActive: true,
-        unreadMessageIds: new Set()
+        unreadMessageIds: new Set(),
+        lastKnownAnnouncementCount: 0,
+        unreadAnnouncementIds: new Set()
     },
 
     // Initialize notifications system
@@ -98,6 +100,8 @@ const notificationsModule = {
                 this.state.isEnabled = settings.enabled && this.state.permission === 'granted';
                 this.state.lastKnownMessageCount = settings.lastKnownMessageCount || 0;
                 this.state.unreadMessageIds = new Set(settings.unreadMessageIds || []);
+                this.state.lastKnownAnnouncementCount = settings.lastKnownAnnouncementCount || 0;
+                this.state.unreadAnnouncementIds = new Set(settings.unreadAnnouncementIds || []);
                 console.log('🔔 Restored settings:', {
                     savedEnabled: settings.enabled,
                     currentPermission: this.state.permission,
@@ -114,7 +118,9 @@ const notificationsModule = {
         const settings = {
             enabled: this.state.isEnabled,
             lastKnownMessageCount: this.state.lastKnownMessageCount,
-            unreadMessageIds: Array.from(this.state.unreadMessageIds)
+            unreadMessageIds: Array.from(this.state.unreadMessageIds),
+            lastKnownAnnouncementCount: this.state.lastKnownAnnouncementCount,
+            unreadAnnouncementIds: Array.from(this.state.unreadAnnouncementIds)
         };
         localStorage.setItem('roommatePortal_notificationSettings', JSON.stringify(settings));
     },
@@ -149,11 +155,14 @@ const notificationsModule = {
             }
         });
 
-        // Listen for tab switches to messages
+        // Listen for tab switches to messages and announcements
         window.addEventListener('roommatePortal:tabSwitch', (event) => {
             if (event.detail.tab === 'messages' && this.state.isTabActive) {
                 // User switched to messages tab - mark as read
                 setTimeout(() => this.markVisibleMessagesAsRead(), 500);
+            } else if (event.detail.tab === 'announcements' && this.state.isTabActive) {
+                // User switched to announcements tab - mark as read
+                setTimeout(() => this.markVisibleAnnouncementsAsRead(), 500);
             }
         });
 
@@ -330,6 +339,7 @@ const notificationsModule = {
 
         this.state.intervalId = setInterval(() => {
             this.checkForNewMessages();
+            this.checkForNewAnnouncements();
         }, interval);
     },
 
@@ -450,6 +460,119 @@ const notificationsModule = {
         this.saveNotificationSettings();
     },
 
+    // Check for new announcements
+    async checkForNewAnnouncements() {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+
+        if (!currentUser || !currentHousehold || !this.state.isEnabled) {
+            return;
+        }
+
+        try {
+            const announcements = window.RoommatePortal.state.getAnnouncements() || [];
+            const newAnnouncements = this.findNewAnnouncements(announcements);
+
+            if (newAnnouncements.length > 0) {
+                // Reset backoff on successful check with new announcements
+                this.resetBackoff();
+
+                // Show notifications for new announcements (but not if tab is active and on announcements)
+                const isViewingAnnouncements = this.state.isTabActive &&
+                    !document.getElementById('announcementsSection')?.classList.contains('hidden');
+
+                if (!isViewingAnnouncements) {
+                    this.showNewAnnouncementNotifications(newAnnouncements);
+                }
+
+                // Update state
+                this.updateLastKnownAnnouncementState();
+            } else {
+                // No new announcements - maintain current backoff
+                this.state.retryCount = 0;
+            }
+
+            this.state.lastCheckTime = Date.now();
+
+        } catch (error) {
+            console.error('Error checking for new announcements:', error);
+            this.handleCheckError();
+        }
+    },
+
+    // Find new announcements since last check
+    findNewAnnouncements(announcements) {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        if (!currentUser) return [];
+
+        const newAnnouncements = announcements.filter(announcement => {
+            // Skip own announcements
+            if (announcement.authorId === currentUser.uid) return false;
+
+            // Check if we haven't already notified about this announcement
+            const isNewToUs = !this.state.unreadAnnouncementIds.has(announcement.id);
+
+            return isNewToUs;
+        });
+
+        return newAnnouncements;
+    },
+
+    // Show browser notifications for new announcements
+    showNewAnnouncementNotifications(newAnnouncements) {
+        // Group announcements by author to avoid spam
+        const announcementsByAuthor = {};
+        newAnnouncements.forEach(announcement => {
+            if (!announcementsByAuthor[announcement.author]) {
+                announcementsByAuthor[announcement.author] = [];
+            }
+            announcementsByAuthor[announcement.author].push(announcement);
+
+            // Track that we've notified about this announcement
+            this.state.unreadAnnouncementIds.add(announcement.id);
+        });
+
+        // Create notifications (max 3 to avoid overwhelming)
+        const authors = Object.keys(announcementsByAuthor).slice(0, 3);
+
+        authors.forEach((author, index) => {
+            const announcements = announcementsByAuthor[author];
+            const announcementCount = announcements.length;
+
+            let body, icon;
+
+            if (announcementCount === 1) {
+                const announcement = announcements[0];
+                const title = announcement.title || 'New Announcement';
+                body = announcement.body.length > 100 ?
+                    announcement.body.substring(0, 100) + '...' :
+                    announcement.body;
+                icon = '📢';
+            } else {
+                body = `${announcementCount} new announcements`;
+                icon = '📢';
+            }
+
+            // Delay notifications slightly to avoid overwhelming
+            setTimeout(() => {
+                this.createNotification(`${icon} ${author}`, body);
+            }, index * 1000);
+        });
+
+        // If there are more authors, show a summary notification
+        if (Object.keys(announcementsByAuthor).length > 3) {
+            const totalNewAnnouncements = newAnnouncements.length;
+            const remainingAuthors = Object.keys(announcementsByAuthor).length - 3;
+
+            setTimeout(() => {
+                this.createNotification(
+                    '📢 Multiple roommates',
+                    `${totalNewAnnouncements} new announcements from ${remainingAuthors + 3} roommates`
+                );
+            }, 3000);
+        }
+    },
+
     // Create and show a browser notification
     createNotification(title, body) {
         if (this.state.permission !== 'granted') {
@@ -491,6 +614,17 @@ const notificationsModule = {
     updateLastKnownState() {
         const messages = window.RoommatePortal.state.getMessages() || [];
         this.state.lastKnownMessageCount = messages.length;
+
+        const announcements = window.RoommatePortal.state.getAnnouncements() || [];
+        this.state.lastKnownAnnouncementCount = announcements.length;
+
+        this.saveNotificationSettings();
+    },
+
+    // Update last known announcement state
+    updateLastKnownAnnouncementState() {
+        const announcements = window.RoommatePortal.state.getAnnouncements() || [];
+        this.state.lastKnownAnnouncementCount = announcements.length;
         this.saveNotificationSettings();
     },
 
@@ -504,6 +638,13 @@ const notificationsModule = {
         if (window.RoommatePortal.messages && window.RoommatePortal.messages.markMessagesAsRead) {
             window.RoommatePortal.messages.markMessagesAsRead();
         }
+    },
+
+    // Mark currently visible announcements as read (clear notification tracking)
+    markVisibleAnnouncementsAsRead() {
+        // Clear our tracking of unread announcements since user is viewing them
+        this.state.unreadAnnouncementIds.clear();
+        this.saveNotificationSettings();
     },
 
     // Handle check errors with exponential backoff
@@ -543,6 +684,8 @@ const notificationsModule = {
     resetState() {
         this.state.lastKnownMessageCount = 0;
         this.state.unreadMessageIds.clear();
+        this.state.lastKnownAnnouncementCount = 0;
+        this.state.unreadAnnouncementIds.clear();
         this.resetBackoff();
         this.saveNotificationSettings();
     },
