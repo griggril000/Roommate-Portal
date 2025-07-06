@@ -217,29 +217,6 @@
                     <h2 class="text-xl md:text-2xl font-bold text-gray-800">Chore Management</h2>
                 </div>
 
-                <!-- Add Chore Form -->
-                <div class="bg-blue-50 rounded-lg p-4 md:p-6 mb-8">
-                    <form id="addChoreForm" class="space-y-4">
-                        <div class="grid grid-cols-1 gap-4">
-                            <input type="text" id="choreInput"
-                                class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors"
-                                placeholder="What needs to be done?">
-                            <select id="choreAssignee"
-                                class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors">
-                                <option value="">Assign to...</option>
-                                <option value="Alex">Alex</option>
-                                <option value="Jordan">Jordan</option>
-                                <option value="Taylor">Taylor</option>
-                                <option value="Everyone">Everyone</option>
-                            </select>
-                            <button type="submit"
-                                class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
-                                <i class="fas fa-plus mr-2"></i>Add Chore
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
                 <!-- Chore List -->
                 <div id="choreList" class="space-y-4">
                     <!-- Chores will be dynamically added here -->
@@ -257,24 +234,6 @@
                     <h2 class="text-xl md:text-2xl font-bold text-gray-800">Message Board</h2>
                 </div>
 
-                <!-- Post Message Form -->
-                <div class="bg-purple-50 rounded-lg p-4 md:p-6 mb-8">
-                    <form id="postMessageForm" class="space-y-4">
-                        <div class="grid grid-cols-1 gap-4">
-                            <input type="text" id="authorInput"
-                                class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-purple-500 focus:outline-none transition-colors"
-                                placeholder="Your name">
-                            <textarea id="messageInput"
-                                class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-purple-500 focus:outline-none transition-colors resize-none"
-                                rows="3" placeholder="Share something with your roommates..."></textarea>
-                            <button type="submit"
-                                class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors duration-200">
-                                <i class="fas fa-paper-plane mr-2"></i>Post
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
                 <!-- Message List -->
                 <div id="messageList" class="space-y-4">
                     <!-- Messages will be dynamically added here -->
@@ -290,27 +249,6 @@
                         <i class="fas fa-bullhorn text-orange-600 text-xl"></i>
                     </div>
                     <h2 class="text-xl md:text-2xl font-bold text-gray-800">Announcements</h2>
-                </div>
-
-                <!-- Post Announcement Form -->
-                <div class="bg-orange-50 rounded-lg p-4 md:p-6 mb-8">
-                    <form id="postAnnouncementForm" class="space-y-4">
-                        <div class="grid grid-cols-1 gap-4">
-                            <input type="text" id="announcementTitleInput"
-                                class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors"
-                                placeholder="Announcement title (optional)">
-                            <textarea id="announcementBodyInput"
-                                class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors resize-none"
-                                rows="3" placeholder="What would you like to announce?" required></textarea>
-                            <input type="datetime-local" id="announcementExpirationInput"
-                                class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors"
-                                placeholder="Expiration date (optional)">
-                            <button type="submit"
-                                class="px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors duration-200">
-                                <i class="fas fa-bullhorn mr-2"></i>Post Announcement
-                            </button>
-                        </div>
-                    </form>
                 </div>
 
                 <!-- Announcement List -->
@@ -350,6 +288,65 @@
     </div>
 
     <!-- Household Modal (will be dynamically created) -->
+
+    <!-- Hidden Forms for FAB System -->
+    <div style="display: none;">
+        <!-- Add Chore Form -->
+        <form id="addChoreForm" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+                <input type="text" id="choreInput"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors"
+                    placeholder="What needs to be done?">
+                <select id="choreAssignee"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors">
+                    <option value="">Assign to...</option>
+                    <option value="Alex">Alex</option>
+                    <option value="Jordan">Jordan</option>
+                    <option value="Taylor">Taylor</option>
+                    <option value="Everyone">Everyone</option>
+                </select>
+                <button type="submit"
+                    class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
+                    <i class="fas fa-plus mr-2"></i>Add Chore
+                </button>
+            </div>
+        </form>
+
+        <!-- Post Message Form -->
+        <form id="postMessageForm" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+                <input type="text" id="authorInput"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-purple-500 focus:outline-none transition-colors"
+                    placeholder="Your name">
+                <textarea id="messageInput"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-purple-500 focus:outline-none transition-colors resize-none"
+                    rows="3" placeholder="Share something with your roommates..."></textarea>
+                <button type="submit"
+                    class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors duration-200">
+                    <i class="fas fa-paper-plane mr-2"></i>Post
+                </button>
+            </div>
+        </form>
+
+        <!-- Post Announcement Form -->
+        <form id="postAnnouncementForm" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+                <input type="text" id="announcementTitleInput"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors"
+                    placeholder="Announcement title (optional)">
+                <textarea id="announcementBodyInput"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors resize-none"
+                    rows="3" placeholder="What would you like to announce?" required></textarea>
+                <input type="datetime-local" id="announcementExpirationInput"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors"
+                    placeholder="Expiration date (optional)">
+                <button type="submit"
+                    class="px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors duration-200">
+                    <i class="fas fa-bullhorn mr-2"></i>Post Announcement
+                </button>
+            </div>
+        </form>
+    </div>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
