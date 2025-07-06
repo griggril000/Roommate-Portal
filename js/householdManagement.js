@@ -451,8 +451,23 @@ const householdManagement = {
                 );
             });
 
+            // 8. Update all announcements posted by this user
+            const announcementsQuery = await db.collection('announcements')
+                .where('householdId', '==', currentHousehold.id)
+                .where('authorId', '==', userId)
+                .get();
+
+            const announcementUpdates = [];
+            announcementsQuery.docs.forEach(doc => {
+                announcementUpdates.push(
+                    db.collection('announcements').doc(doc.id).update({
+                        author: newName
+                    })
+                );
+            });
+
             // Execute all updates
-            await Promise.all([...choreUpdates, ...messageUpdates]);
+            await Promise.all([...choreUpdates, ...messageUpdates, ...announcementUpdates]);
 
             // Update local household data
             if (currentHousehold.memberDetails && currentHousehold.memberDetails[userId]) {
