@@ -46,67 +46,13 @@ const appModule = {
         }
     },
 
-    // Setup tab switching handlers
+    // Setup dashboard navigation handlers
     setupTabHandlers() {
-        const dashboardTab = document.getElementById('dashboardTab');
-        const choresTab = document.getElementById('choresTab');
-        const messagesTab = document.getElementById('messagesTab');
-        const announcementsTab = document.getElementById('announcementsTab');
-
-        // Dashboard tab handler
-        if (dashboardTab) {
-            dashboardTab.addEventListener('click', () => {
-                window.RoommatePortal.utils.switchTab('dashboard');
-                // Remove FAB on dashboard
-                if (this.currentFAB) {
-                    this.currentFAB.remove();
-                    this.currentFAB = null;
-                }
-                // Dispatch tab switch event for notifications
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'dashboard' }
-                }));
-            });
-        }
-
-        if (choresTab) {
-            choresTab.addEventListener('click', () => {
-                window.RoommatePortal.utils.switchTab('chores');
-                // Create FAB for chores
-                setTimeout(() => this.createFAB('chores'), 100);
-                // Dispatch tab switch event for notifications
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'chores' }
-                }));
-            });
-        }
-
-        if (messagesTab) {
-            messagesTab.addEventListener('click', () => {
-                window.RoommatePortal.utils.switchTab('messages');
-                // Create FAB for messages
-                setTimeout(() => this.createFAB('messages'), 100);
-                // Dispatch tab switch event for notifications
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'messages' }
-                }));
-            });
-        }
-
-        if (announcementsTab) {
-            announcementsTab.addEventListener('click', () => {
-                window.RoommatePortal.utils.switchTab('announcements');
-                // Create FAB for announcements
-                setTimeout(() => this.createFAB('announcements'), 100);
-                // Dispatch tab switch event for notifications
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'announcements' }
-                }));
-            });
-        }
-
-        // Setup clickable dashboard tiles
+        // Setup clickable dashboard tiles (primary navigation)
         this.setupDashboardTiles();
+
+        // Setup "Back to Dashboard" buttons
+        this.setupBackToDashboardButtons();
 
         // Setup floating action buttons
         this.setupFloatingActionButtons();
@@ -159,6 +105,58 @@ const appModule = {
                 setTimeout(() => this.createFAB('announcements'), 100);
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'announcements' }
+                }));
+            });
+        }
+    },
+
+    // Setup "Back to Dashboard" buttons
+    setupBackToDashboardButtons() {
+        const backToDashboardFromChores = document.getElementById('backToDashboardFromChores');
+        const backToDashboardFromMessages = document.getElementById('backToDashboardFromMessages');
+        const backToDashboardFromAnnouncements = document.getElementById('backToDashboardFromAnnouncements');
+
+        // Back to dashboard from chores
+        if (backToDashboardFromChores) {
+            backToDashboardFromChores.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('dashboard');
+                // Remove FAB when returning to dashboard
+                if (this.currentFAB) {
+                    this.currentFAB.remove();
+                    this.currentFAB = null;
+                }
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'dashboard' }
+                }));
+            });
+        }
+
+        // Back to dashboard from messages
+        if (backToDashboardFromMessages) {
+            backToDashboardFromMessages.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('dashboard');
+                // Remove FAB when returning to dashboard
+                if (this.currentFAB) {
+                    this.currentFAB.remove();
+                    this.currentFAB = null;
+                }
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'dashboard' }
+                }));
+            });
+        }
+
+        // Back to dashboard from announcements
+        if (backToDashboardFromAnnouncements) {
+            backToDashboardFromAnnouncements.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('dashboard');
+                // Remove FAB when returning to dashboard
+                if (this.currentFAB) {
+                    this.currentFAB.remove();
+                    this.currentFAB = null;
+                }
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'dashboard' }
                 }));
             });
         }

@@ -183,43 +183,28 @@ const utils = {
         this.updateHouseholdStatus('Not connected to a household', false);
     },
 
-    // Tab switching functionality
+    // Tab switching functionality (dashboard-first navigation)
     switchTab(tabName) {
-        const dashboardTab = document.getElementById('dashboardTab');
-        const choresTab = document.getElementById('choresTab');
-        const messagesTab = document.getElementById('messagesTab');
-        const announcementsTab = document.getElementById('announcementsTab');
         const dashboardSection = document.getElementById('dashboardSection');
         const choreSection = document.getElementById('choreSection');
         const messageSection = document.getElementById('messageSection');
         const announcementsSection = document.getElementById('announcementsSection');
 
-        // Reset all tabs to default state
-        const defaultTabClass = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
-        dashboardTab.className = defaultTabClass;
-        choresTab.className = defaultTabClass;
-        messagesTab.className = defaultTabClass;
-        announcementsTab.className = defaultTabClass;
-
         // Hide all sections
-        dashboardSection.className = "tab-content hidden";
-        choreSection.className = "tab-content hidden";
-        messageSection.className = "tab-content hidden";
-        announcementsSection.className = "tab-content hidden";
+        if (dashboardSection) dashboardSection.className = "tab-content hidden";
+        if (choreSection) choreSection.className = "tab-content hidden";
+        if (messageSection) messageSection.className = "tab-content hidden";
+        if (announcementsSection) announcementsSection.className = "tab-content hidden";
 
-        // Show selected tab and section
+        // Show selected section
         if (tabName === 'dashboard') {
-            dashboardTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm";
-            dashboardSection.className = "tab-content";
+            if (dashboardSection) dashboardSection.className = "tab-content";
         } else if (tabName === 'chores') {
-            choresTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm";
-            choreSection.className = "tab-content";
+            if (choreSection) choreSection.className = "tab-content";
         } else if (tabName === 'messages') {
-            messagesTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-purple-600 text-white shadow-sm";
-            messageSection.className = "tab-content";
+            if (messageSection) messageSection.className = "tab-content";
         } else if (tabName === 'announcements') {
-            announcementsTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-orange-600 text-white shadow-sm";
-            announcementsSection.className = "tab-content";
+            if (announcementsSection) announcementsSection.className = "tab-content";
         }
 
         // Dispatch tab switch event for notification system

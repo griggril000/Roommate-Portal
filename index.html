@@ -104,30 +104,6 @@
 
     <!-- Main Content -->
     <main id="mainContent" class="max-w-7xl mx-auto px-4 py-4 md:py-8">
-        <!-- Tab Navigation -->
-        <div class="flex space-x-1 mb-4 md:mb-8 bg-white p-2 rounded-lg shadow-md">
-            <button id="dashboardTab"
-                class="flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm">
-                <i class="fas fa-tachometer-alt"></i>
-                <span class="text-sm md:text-base">Dashboard</span>
-            </button>
-            <button id="choresTab"
-                class="flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100">
-                <i class="fas fa-tasks"></i>
-                <span class="text-sm md:text-base">Chores</span>
-            </button>
-            <button id="messagesTab"
-                class="flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100">
-                <i class="fas fa-comments"></i>
-                <span class="text-sm md:text-base">Messages</span>
-            </button>
-            <button id="announcementsTab"
-                class="flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100">
-                <i class="fas fa-bullhorn"></i>
-                <span class="text-sm md:text-base">Announcements</span>
-            </button>
-        </div>
-
         <!-- Dashboard Section -->
         <section id="dashboardSection" class="tab-content">
             <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 border border-gray-100 mb-8">
@@ -210,11 +186,17 @@
         <!-- Chore Management Section -->
         <section id="choreSection" class="tab-content">
             <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 border border-gray-100">
-                <div class="flex items-center space-x-3 mb-6">
-                    <div class="bg-blue-100 p-3 rounded-xl">
-                        <i class="fas fa-tasks text-blue-600 text-xl"></i>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-blue-100 p-3 rounded-xl">
+                            <i class="fas fa-tasks text-blue-600 text-xl"></i>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Chore Management</h2>
                     </div>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-800">Chore Management</h2>
+                    <button id="backToDashboardFromChores"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                    </button>
                 </div>
 
                 <!-- Chore List -->
@@ -227,11 +209,17 @@
         <!-- Message Board Section -->
         <section id="messageSection" class="tab-content hidden">
             <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 border border-gray-100">
-                <div class="flex items-center space-x-3 mb-6">
-                    <div class="bg-purple-100 p-3 rounded-xl">
-                        <i class="fas fa-comments text-purple-600 text-xl"></i>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-purple-100 p-3 rounded-xl">
+                            <i class="fas fa-comments text-purple-600 text-xl"></i>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Message Board</h2>
                     </div>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-800">Message Board</h2>
+                    <button id="backToDashboardFromMessages"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                    </button>
                 </div>
 
                 <!-- Message List -->
@@ -244,11 +232,17 @@
         <!-- Announcements Section -->
         <section id="announcementsSection" class="tab-content hidden">
             <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 border border-gray-100">
-                <div class="flex items-center space-x-3 mb-6">
-                    <div class="bg-orange-100 p-3 rounded-xl">
-                        <i class="fas fa-bullhorn text-orange-600 text-xl"></i>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-orange-100 p-3 rounded-xl">
+                            <i class="fas fa-bullhorn text-orange-600 text-xl"></i>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Announcements</h2>
                     </div>
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-800">Announcements</h2>
+                    <button id="backToDashboardFromAnnouncements"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                    </button>
                 </div>
 
                 <!-- Announcement List -->
