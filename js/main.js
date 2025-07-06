@@ -181,8 +181,10 @@ const appModule = {
         }
 
         const fab = document.createElement('button');
-        fab.className = 'fab';
+        fab.className = `fab fab-${section}`;
         fab.innerHTML = '<i class="fas fa-plus"></i>';
+
+        // Base styles that are consistent across all FABs
         fab.style.cssText = `
             position: fixed;
             bottom: 30px;
@@ -190,12 +192,10 @@ const appModule = {
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            background: linear-gradient(45deg, #4F46E5, #7C3AED);
             color: white;
             border: none;
             font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
             transition: all 0.3s ease;
             z-index: 1000;
             display: flex;
@@ -206,12 +206,10 @@ const appModule = {
         // Add hover effects
         fab.addEventListener('mouseenter', () => {
             fab.style.transform = 'scale(1.1)';
-            fab.style.boxShadow = '0 12px 25px rgba(79, 70, 229, 0.4)';
         });
 
         fab.addEventListener('mouseleave', () => {
             fab.style.transform = 'scale(1)';
-            fab.style.boxShadow = '0 8px 20px rgba(79, 70, 229, 0.3)';
         });
 
         // Add click handler

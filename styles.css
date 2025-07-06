@@ -473,6 +473,34 @@ header {
     transform: scale(0.95);
 }
 
+/* FAB Color Variations */
+.fab.fab-chores {
+    background: linear-gradient(45deg, #2563EB, #1D4ED8);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+}
+
+.fab.fab-chores:hover {
+    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.4);
+}
+
+.fab.fab-messages {
+    background: linear-gradient(45deg, #7C3AED, #6D28D9);
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+}
+
+.fab.fab-messages:hover {
+    box-shadow: 0 12px 25px rgba(124, 58, 237, 0.4);
+}
+
+.fab.fab-announcements {
+    background: linear-gradient(45deg, #EA580C, #DC2626);
+    box-shadow: 0 8px 20px rgba(234, 88, 12, 0.3);
+}
+
+.fab.fab-announcements:hover {
+    box-shadow: 0 12px 25px rgba(234, 88, 12, 0.4);
+}
+
 /* Modal Styles */
 .input-modal {
     position: fixed;
