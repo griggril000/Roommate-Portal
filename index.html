@@ -118,83 +118,77 @@
 
                 <!-- Dashboard Stats - Clickable Tiles -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div id="activeChoresTile"
-                        class="dashboard-tile bg-blue-600 rounded-lg p-6 text-white cursor-pointer hover:bg-blue-700 transition-colors duration-200 transform hover:scale-105">
+                    <div id="choresTile"
+                        class="dashboard-tile bg-blue-600 rounded-lg p-5 text-white cursor-pointer hover:bg-blue-700 transition-colors duration-200 transform hover:scale-105">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-blue-100">Active Chores</p>
-                                <p class="text-3xl font-bold" id="activeChoresCount">0</p>
+                                <p class="text-blue-100 text-base font-medium mb-2">Chores</p>
+                                <div class="flex items-center gap-5">
+                                    <div class="flex flex-col items-center">
+                                        <p class="text-xs text-blue-100">Active</p>
+                                        <p class="text-2xl font-bold" id="activeChoresCount">0</p>
+                                    </div>
+                                    <div class="w-px h-10 bg-blue-400"></div>
+                                    <div class="flex flex-col items-center">
+                                        <p class="text-xs text-blue-100">Completed Today</p>
+                                        <p class="text-2xl font-bold" id="completedTodayCount">0</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="bg-blue-500 p-3 rounded-lg">
-                                <i class="fas fa-tasks text-2xl"></i>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-blue-100 text-sm">
-                            <i class="fas fa-arrow-right mr-2"></i>Click to manage chores
-                        </div>
-                    </div>
-
-                    <div id="completedTodayTile"
-                        class="dashboard-tile bg-green-600 rounded-lg p-6 text-white cursor-pointer hover:bg-green-700 transition-colors duration-200 transform hover:scale-105">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-green-100">Completed Today</p>
-                                <p class="text-3xl font-bold" id="completedTodayCount">0</p>
-                            </div>
-                            <div class="bg-green-500 p-3 rounded-lg">
-                                <i class="fas fa-check-circle text-2xl"></i>
+                            <div class="bg-blue-500 p-2.5 rounded-lg">
+                                <i class="fas fa-tasks text-xl"></i>
                             </div>
                         </div>
-                        <div class="mt-4 text-green-100 text-sm">
-                            <i class="fas fa-arrow-right mr-2"></i>Click to view chores
+                        <div class="mt-3 text-blue-100 text-sm">
+                            <i class="fas fa-arrow-right mr-1"></i>Click to manage chores
                         </div>
                     </div>
 
                     <div id="rewardPointsTile"
-                        class="dashboard-tile bg-yellow-600 rounded-lg p-6 text-white cursor-pointer hover:bg-yellow-700 transition-colors duration-200 transform hover:scale-105 hidden">
+                        class="dashboard-tile bg-yellow-600 rounded-lg p-5 text-white cursor-pointer hover:bg-yellow-700 transition-colors duration-200 transform hover:scale-105 hidden">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-yellow-100">Reward Points</p>
+                                <p class="text-yellow-100 text-base font-medium mb-2">Reward Points</p>
                                 <p class="text-3xl font-bold" id="rewardPointsCount">0</p>
                             </div>
-                            <div class="bg-yellow-500 p-3 rounded-lg">
-                                <i class="fas fa-star text-2xl"></i>
+                            <div class="bg-yellow-500 p-2.5 rounded-lg">
+                                <i class="fas fa-star text-xl"></i>
                             </div>
                         </div>
-                        <div class="mt-4 text-yellow-100 text-sm">
-                            <i class="fas fa-arrow-right mr-2"></i>Click to manage rewards
+                        <div class="mt-3 text-yellow-100 text-sm">
+                            <i class="fas fa-arrow-right mr-1"></i>Click to manage rewards
                         </div>
                     </div>
 
                     <div id="newMessagesTile"
-                        class="dashboard-tile bg-purple-600 rounded-lg p-6 text-white cursor-pointer hover:bg-purple-700 transition-colors duration-200 transform hover:scale-105">
+                        class="dashboard-tile bg-purple-600 rounded-lg p-5 text-white cursor-pointer hover:bg-purple-700 transition-colors duration-200 transform hover:scale-105">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-purple-100">New Messages</p>
+                                <p class="text-purple-100 text-base font-medium mb-2">New Messages</p>
                                 <p class="text-3xl font-bold" id="newMessagesCount">0</p>
                             </div>
-                            <div class="bg-purple-500 p-3 rounded-lg">
-                                <i class="fas fa-comments text-2xl"></i>
+                            <div class="bg-purple-500 p-2.5 rounded-lg">
+                                <i class="fas fa-comments text-xl"></i>
                             </div>
                         </div>
-                        <div class="mt-4 text-purple-100 text-sm">
-                            <i class="fas fa-arrow-right mr-2"></i>Click to view messages
+                        <div class="mt-3 text-purple-100 text-sm">
+                            <i class="fas fa-arrow-right mr-1"></i>Click to view messages
                         </div>
                     </div>
 
                     <div id="activeAnnouncementsTile"
-                        class="dashboard-tile bg-orange-600 rounded-lg p-6 text-white cursor-pointer hover:bg-orange-700 transition-colors duration-200 transform hover:scale-105">
+                        class="dashboard-tile bg-orange-600 rounded-lg p-5 text-white cursor-pointer hover:bg-orange-700 transition-colors duration-200 transform hover:scale-105">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-orange-100">Active Announcements</p>
+                                <p class="text-orange-100 text-base font-medium mb-2">Active Announcements</p>
                                 <p class="text-3xl font-bold" id="activeAnnouncementsCount">0</p>
                             </div>
-                            <div class="bg-orange-500 p-3 rounded-lg">
-                                <i class="fas fa-bullhorn text-2xl"></i>
+                            <div class="bg-orange-500 p-2.5 rounded-lg">
+                                <i class="fas fa-bullhorn text-xl"></i>
                             </div>
                         </div>
-                        <div class="mt-4 text-orange-100 text-sm">
-                            <i class="fas fa-arrow-right mr-2"></i>Click to view announcements
+                        <div class="mt-3 text-orange-100 text-sm">
+                            <i class="fas fa-arrow-right mr-1"></i>Click to view announcements
                         </div>
                     </div>
                 </div>
@@ -381,7 +375,8 @@
                 <textarea id="announcementBodyInput"
                     class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors resize-none"
                     rows="3" placeholder="What would you like to announce?" required></textarea>
-                <label for="announcementExpirationInput" class="text-gray-700">Announcement Expiration Date (Optional)</label>
+                <label for="announcementExpirationInput" class="text-gray-700">Announcement Expiration Date
+                    (Optional)</label>
                 <input type="datetime-local" id="announcementExpirationInput"
                     class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-orange-500 focus:outline-none transition-colors"
                     placeholder="Expiration date (optional)">

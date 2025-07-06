@@ -63,26 +63,14 @@ const appModule = {
 
     // Setup clickable dashboard tiles
     setupDashboardTiles() {
-        const activeChoresTile = document.getElementById('activeChoresTile');
-        const completedTodayTile = document.getElementById('completedTodayTile');
+        const choresTile = document.getElementById('choresTile');
         const rewardPointsTile = document.getElementById('rewardPointsTile');
         const newMessagesTile = document.getElementById('newMessagesTile');
         const activeAnnouncementsTile = document.getElementById('activeAnnouncementsTile');
 
-        // Active chores tile - navigate to chores
-        if (activeChoresTile) {
-            activeChoresTile.addEventListener('click', () => {
-                window.RoommatePortal.utils.switchTab('chores');
-                setTimeout(() => this.createFAB('chores'), 100);
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'chores' }
-                }));
-            });
-        }
-
-        // Completed today tile - navigate to chores
-        if (completedTodayTile) {
-            completedTodayTile.addEventListener('click', () => {
+        // Chores tile - navigate to chores
+        if (choresTile) {
+            choresTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('chores');
                 setTimeout(() => this.createFAB('chores'), 100);
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
