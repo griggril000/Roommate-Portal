@@ -328,6 +328,27 @@ const appModule = {
         setTimeout(() => {
             modal.style.opacity = '1';
             modalContent.style.transform = 'scale(1)';
+
+            // Auto-focus on the first input field after animation completes
+            setTimeout(() => {
+                let firstInput;
+
+                // For messages section, prioritize the message textarea
+                if (section === 'messages') {
+                    firstInput = modalContent.querySelector('textarea');
+                }
+
+                // For other sections or if no textarea found, use the first text/email input
+                if (!firstInput) {
+                    firstInput = modalContent.querySelector('input[type="text"], input[type="email"], textarea');
+                }
+
+                if (firstInput) {
+                    firstInput.focus();
+                    // For mobile devices, scroll the input into view
+                    firstInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
         }, 10);
 
         // Close on overlay click
