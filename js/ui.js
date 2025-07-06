@@ -259,8 +259,8 @@ const ui = {
 
         this.updateUIForAuth();
 
-        // Initialize tab to chores
-        window.RoommatePortal.utils.switchTab('chores');
+        // Initialize tab to dashboard
+        window.RoommatePortal.utils.switchTab('dashboard');
     },
 
     // Setup mobile menu toggle

@@ -48,9 +48,21 @@ const appModule = {
 
     // Setup tab switching handlers
     setupTabHandlers() {
+        const dashboardTab = document.getElementById('dashboardTab');
         const choresTab = document.getElementById('choresTab');
         const messagesTab = document.getElementById('messagesTab');
         const announcementsTab = document.getElementById('announcementsTab');
+
+        // Dashboard tab handler
+        if (dashboardTab) {
+            dashboardTab.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('dashboard');
+                // Dispatch tab switch event for notifications
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'dashboard' }
+                }));
+            });
+        }
 
         if (choresTab) {
             choresTab.addEventListener('click', () => {
@@ -76,6 +88,57 @@ const appModule = {
             announcementsTab.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('announcements');
                 // Dispatch tab switch event for notifications
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'announcements' }
+                }));
+            });
+        }
+
+        // Setup clickable dashboard tiles
+        this.setupDashboardTiles();
+    },
+
+    // Setup clickable dashboard tiles
+    setupDashboardTiles() {
+        const activeChoresTile = document.getElementById('activeChoresTile');
+        const completedTodayTile = document.getElementById('completedTodayTile');
+        const newMessagesTile = document.getElementById('newMessagesTile');
+        const activeAnnouncementsTile = document.getElementById('activeAnnouncementsTile');
+
+        // Active chores tile - navigate to chores
+        if (activeChoresTile) {
+            activeChoresTile.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('chores');
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'chores' }
+                }));
+            });
+        }
+
+        // Completed today tile - navigate to chores
+        if (completedTodayTile) {
+            completedTodayTile.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('chores');
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'chores' }
+                }));
+            });
+        }
+
+        // New messages tile - navigate to messages
+        if (newMessagesTile) {
+            newMessagesTile.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('messages');
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'messages' }
+                }));
+            });
+        }
+
+        // Active announcements tile - navigate to announcements
+        if (activeAnnouncementsTile) {
+            activeAnnouncementsTile.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('announcements');
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'announcements' }
                 }));

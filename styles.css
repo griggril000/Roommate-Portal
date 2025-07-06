@@ -287,6 +287,67 @@ header {
     color: #1f2937;
 }
 
+/* Dashboard Tile Enhancements */
+.dashboard-tile {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-tile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.dashboard-tile:hover::before {
+    left: 100%;
+}
+
+/* Animation for dashboard tiles */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-tile {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.dashboard-tile:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.dashboard-tile:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dashboard-tile:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.dashboard-tile:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
 

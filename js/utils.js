@@ -185,25 +185,33 @@ const utils = {
 
     // Tab switching functionality
     switchTab(tabName) {
+        const dashboardTab = document.getElementById('dashboardTab');
         const choresTab = document.getElementById('choresTab');
         const messagesTab = document.getElementById('messagesTab');
         const announcementsTab = document.getElementById('announcementsTab');
+        const dashboardSection = document.getElementById('dashboardSection');
         const choreSection = document.getElementById('choreSection');
         const messageSection = document.getElementById('messageSection');
         const announcementsSection = document.getElementById('announcementsSection');
 
         // Reset all tabs to default state
-        choresTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
-        messagesTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
-        announcementsTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+        const defaultTabClass = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 text-gray-600 hover:bg-gray-100";
+        dashboardTab.className = defaultTabClass;
+        choresTab.className = defaultTabClass;
+        messagesTab.className = defaultTabClass;
+        announcementsTab.className = defaultTabClass;
 
         // Hide all sections
+        dashboardSection.className = "tab-content hidden";
         choreSection.className = "tab-content hidden";
         messageSection.className = "tab-content hidden";
         announcementsSection.className = "tab-content hidden";
 
         // Show selected tab and section
-        if (tabName === 'chores') {
+        if (tabName === 'dashboard') {
+            dashboardTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm";
+            dashboardSection.className = "tab-content";
+        } else if (tabName === 'chores') {
             choresTab.className = "flex-1 flex items-center justify-center space-x-1 md:space-x-2 py-3 px-2 md:px-4 rounded-lg font-medium transition-all duration-300 bg-blue-600 text-white shadow-sm";
             choreSection.className = "tab-content";
         } else if (tabName === 'messages') {
