@@ -11,17 +11,24 @@ let userHouseholds = [];
 let chores = JSON.parse(localStorage.getItem('roommatePortal_chores')) || [];
 let messages = JSON.parse(localStorage.getItem('roommatePortal_messages')) || [];
 let announcements = JSON.parse(localStorage.getItem('roommatePortal_announcements')) || [];
+let rewards = [];
+let rewardTransactions = [];
 
 // Firestore listeners (to manage cleanup)
 let choresListener = null;
 let messagesListener = null;
 let announcementsListener = null;
+let rewardsListener = null;
+let rewardTransactionsListener = null;
 
 // DOM elements - Core
 const choreInput = document.getElementById('choreInput');
 const choreAssignee = document.getElementById('choreAssignee');
+const chorePoints = document.getElementById('chorePoints');
 const addChoreForm = document.getElementById('addChoreForm');
+const addChoreBtn = document.getElementById('addChoreBtn');
 const choreList = document.getElementById('choreList');
+const rewardsOptInBtn = document.getElementById('rewardsOptInBtn');
 const authorInput = document.getElementById('authorInput');
 const messageInput = document.getElementById('messageInput');
 const postMessageForm = document.getElementById('postMessageForm');
@@ -83,6 +90,12 @@ window.RoommatePortal.state = {
     getAnnouncements: () => announcements,
     setAnnouncements: (announcementList) => { announcements = announcementList; },
 
+    getRewards: () => rewards,
+    setRewards: (rewardsList) => { rewards = rewardsList; },
+
+    getRewardTransactions: () => rewardTransactions,
+    setRewardTransactions: (transactionsList) => { rewardTransactions = transactionsList; },
+
     // Listeners
     getChoresListener: () => choresListener,
     setChoresListener: (listener) => { choresListener = listener; },
@@ -93,12 +106,21 @@ window.RoommatePortal.state = {
     getAnnouncementsListener: () => announcementsListener,
     setAnnouncementsListener: (listener) => { announcementsListener = listener; },
 
+    getRewardsListener: () => rewardsListener,
+    setRewardsListener: (listener) => { rewardsListener = listener; },
+
+    getRewardTransactionsListener: () => rewardTransactionsListener,
+    setRewardTransactionsListener: (listener) => { rewardTransactionsListener = listener; },
+
     // DOM elements
     elements: {
         choreInput,
         choreAssignee,
+        chorePoints,
         addChoreForm,
+        addChoreBtn,
         choreList,
+        rewardsOptInBtn,
         authorInput,
         messageInput,
         postMessageForm,

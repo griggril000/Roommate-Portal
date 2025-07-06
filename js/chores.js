@@ -7,20 +7,71 @@ const choresModule = {
     // Initialize chore management
     init() {
         this.setupChoreForm();
+        this.setupRewardsOptIn();
     },
 
     // Setup chore form event listener
     setupChoreForm() {
         const elements = window.RoommatePortal.state.elements;
+        const addChoreBtn = document.getElementById('addChoreBtn');
 
+        if (addChoreBtn) {
+            addChoreBtn.addEventListener('click', this.handleAddChore.bind(this));
+        }
+
+        // Also handle the FAB form if it exists
         if (elements.addChoreForm) {
             elements.addChoreForm.addEventListener('submit', this.handleAddChore.bind(this));
         }
     },
 
+    // Setup rewards opt-in functionality
+    setupRewardsOptIn() {
+        const elements = window.RoommatePortal.state.elements;
+
+        if (elements.rewardsOptInBtn) {
+            elements.rewardsOptInBtn.addEventListener('click', () => {
+                window.RoommatePortal.rewards.enableRewardsSystem();
+            });
+        }
+
+        // Update UI based on rewards system status
+        this.updateRewardsUI();
+    },
+
+    // Update UI based on rewards system status
+    updateRewardsUI() {
+        const elements = window.RoommatePortal.state.elements;
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+
+        console.log('Updating rewards UI:', {
+            currentHousehold: !!currentHousehold,
+            rewardsEnabled: window.RoommatePortal.rewards?.isRewardsEnabled()
+        });
+
+        if (!currentHousehold) {
+            // Hide rewards elements when no household
+            if (elements.rewardsOptInBtn) elements.rewardsOptInBtn.classList.add('hidden');
+            if (elements.chorePoints) elements.chorePoints.classList.add('hidden');
+            return;
+        }
+
+        const rewardsEnabled = window.RoommatePortal.rewards?.isRewardsEnabled();
+
+        if (rewardsEnabled) {
+            // Show points input, hide opt-in button
+            if (elements.rewardsOptInBtn) elements.rewardsOptInBtn.classList.add('hidden');
+            if (elements.chorePoints) elements.chorePoints.classList.remove('hidden');
+        } else {
+            // Show opt-in button, hide points input
+            if (elements.rewardsOptInBtn) elements.rewardsOptInBtn.classList.remove('hidden');
+            if (elements.chorePoints) elements.chorePoints.classList.add('hidden');
+        }
+    },
+
     // Handle add chore form submission
     handleAddChore(e) {
-        e.preventDefault();
+        if (e.preventDefault) e.preventDefault();
 
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
         const currentUser = window.RoommatePortal.state.getCurrentUser();
@@ -33,6 +84,7 @@ const choresModule = {
 
         const choreText = elements.choreInput.value.trim();
         const assignee = elements.choreAssignee.value;
+        const chorePoints = elements.chorePoints ? parseInt(elements.chorePoints.value) || 0 : 0;
 
         if (choreText) {
             const chore = {
@@ -44,7 +96,8 @@ const choresModule = {
                 householdId: currentHousehold.id,
                 createdBy: currentUser.uid,
                 createdByName: currentUser.displayName,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                points: chorePoints // Add points to chore
             };
 
             // Add to Firestore
@@ -54,12 +107,15 @@ const choresModule = {
                     // Clear form
                     elements.choreInput.value = '';
                     elements.choreAssignee.value = '';
+                    if (elements.chorePoints) elements.chorePoints.value = '';
                     window.RoommatePortal.utils.showNotification('✅ Chore added successfully!');
                 })
                 .catch(error => {
                     console.error('Error adding chore:', error);
                     window.RoommatePortal.utils.showNotification('❌ Failed to add chore. Please try again.');
                 });
+        } else {
+            window.RoommatePortal.utils.showNotification('❌ Please enter a chore description.');
         }
     },
 
@@ -155,6 +211,11 @@ const choresModule = {
                 (chore.completedByName || window.RoommatePortal.utils.getUserDisplayName(chore.completedBy)) :
                 null;
 
+            const pointsDisplay = window.RoommatePortal.rewards?.isRewardsEnabled() && chore.points > 0 ?
+                `<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium ml-2">
+                    ${chore.points} points
+                </span>` : '';
+
             choreElement.innerHTML = `
                 <div class="flex items-start justify-between">
                     <div class="flex items-start space-x-4 flex-1">
@@ -167,6 +228,7 @@ const choresModule = {
                                     ${priorityIcon} ${chore.text}
                                 </span>
                                 <span class="chore-assignee">${chore.assignee}</span>
+                                ${pointsDisplay}
                                 ${isFormerMemberChore ? '<span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">Legacy</span>' : ''}
                             </div>
                             <div class="chore-date">
@@ -209,11 +271,24 @@ const choresModule = {
                 chore.completedDate = new Date().toLocaleDateString();
                 chore.completedBy = currentUser.uid;
                 chore.completedByName = currentUser.displayName;
+
+                // Award points if rewards system is enabled
+                if (window.RoommatePortal.rewards?.isRewardsEnabled() && chore.points > 0) {
+                    window.RoommatePortal.rewards.awardPointsForChore(chore.id, chore.text, chore.points);
+                }
+
                 window.RoommatePortal.utils.showNotification('🎉 Chore completed! Great job!');
             } else {
+                // Deduct points if rewards system is enabled and chore had points
+                if (window.RoommatePortal.rewards?.isRewardsEnabled() && chore.points > 0) {
+                    window.RoommatePortal.rewards.deductPointsForChore(chore.id, chore.text, chore.points);
+                }
+
                 delete chore.completedDate;
                 delete chore.completedBy;
                 delete chore.completedByName;
+                
+                window.RoommatePortal.utils.showNotification('🔄 Chore marked as incomplete.');
             }
 
             // Update in Firestore
@@ -258,6 +333,11 @@ const choresModule = {
                 completedBy: chore.completedBy,
                 completedByName: chore.completedByName
             }).then(() => {
+                // Award points if rewards system is enabled
+                if (window.RoommatePortal.rewards?.isRewardsEnabled() && chore.points > 0) {
+                    window.RoommatePortal.rewards.awardPointsForChore(chore.id, chore.text, chore.points);
+                }
+
                 window.RoommatePortal.utils.showNotification('🎉 Awesome! Chore marked as complete!');
             }).catch(error => {
                 console.error('Error updating chore:', error);

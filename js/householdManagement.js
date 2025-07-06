@@ -55,6 +55,9 @@ const householdManagement = {
                     </div>
                     
                     <div class="flex space-x-3 pt-4 border-t">
+                        <button id="rewardsManagementBtn" class="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors">
+                            <i class="fas fa-star mr-2"></i>Rewards
+                        </button>
                         <button id="leaveHouseholdBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
                             Leave Household
                         </button>
@@ -76,6 +79,11 @@ const householdManagement = {
         document.body.style.overflow = 'hidden';
 
         // Add event listeners
+        document.getElementById('rewardsManagementBtn').addEventListener('click', () => {
+            modal.remove();
+            document.body.style.overflow = '';
+            window.RoommatePortal.rewards.showRewardsModal();
+        });
         document.getElementById('leaveHouseholdBtn').addEventListener('click', window.RoommatePortal.householdManagement.leaveHousehold.bind(window.RoommatePortal.householdManagement));
         document.getElementById('deleteAccountBtn').addEventListener('click', window.RoommatePortal.householdManagement.deleteUserAccount.bind(window.RoommatePortal.householdManagement));
         document.getElementById('closeHouseholdManagementBtn').addEventListener('click', () => {

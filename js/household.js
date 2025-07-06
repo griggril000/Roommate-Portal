@@ -60,6 +60,13 @@ const household = {
             window.RoommatePortal.chores.loadChoresFromFirestore();
             window.RoommatePortal.messages.loadMessagesFromFirestore();
             window.RoommatePortal.announcements.loadAnnouncements();
+
+            // Update rewards UI when household data changes
+            if (window.RoommatePortal.rewards) {
+                window.RoommatePortal.rewards.init();
+                window.RoommatePortal.chores.updateRewardsUI();
+            }
+
             this.updateHouseholdMembers();
         }
     },

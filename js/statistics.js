@@ -16,6 +16,7 @@ const statistics = {
             if (elements.completedTodayCount) elements.completedTodayCount.textContent = '0';
             if (elements.newMessagesCount) elements.newMessagesCount.textContent = '0';
             if (elements.activeAnnouncementsCount) elements.activeAnnouncementsCount.textContent = '0';
+            this.updateRewardsStats();
             return;
         }
 
@@ -44,11 +45,33 @@ const statistics = {
         if (elements.newMessagesCount) elements.newMessagesCount.textContent = newMessages;
         if (elements.activeAnnouncementsCount) elements.activeAnnouncementsCount.textContent = activeAnnouncements;
 
+        // Update rewards statistics
+        this.updateRewardsStats();
+
         // Mark messages as read after viewing (only if user is still logged in and has household)
         if (currentUser && currentHousehold && messagesList.length > 0) {
             setTimeout(() => {
                 window.RoommatePortal.messages.markMessagesAsRead();
             }, 5000);
+        }
+    },
+
+    // Update rewards statistics
+    updateRewardsStats() {
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+        const rewardPointsTile = document.getElementById('rewardPointsTile');
+        const rewardPointsCount = document.getElementById('rewardPointsCount');
+
+        if (!rewardPointsTile || !rewardPointsCount) return;
+
+        const rewardsEnabled = window.RoommatePortal.rewards?.isRewardsEnabled();
+
+        if (rewardsEnabled && currentHousehold) {
+            const currentPoints = window.RoommatePortal.rewards.getCurrentPoints();
+            rewardPointsCount.textContent = currentPoints;
+            rewardPointsTile.classList.remove('hidden');
+        } else {
+            rewardPointsTile.classList.add('hidden');
         }
     }
 };

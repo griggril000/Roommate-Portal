@@ -33,6 +33,9 @@ const appModule = {
             window.RoommatePortal.messages.init();
             window.RoommatePortal.announcements.init();
 
+            // Initialize rewards system
+            window.RoommatePortal.rewards.init();
+
             // Initialize notifications module
             window.RoommatePortal.notifications.init();
 
@@ -62,6 +65,7 @@ const appModule = {
     setupDashboardTiles() {
         const activeChoresTile = document.getElementById('activeChoresTile');
         const completedTodayTile = document.getElementById('completedTodayTile');
+        const rewardPointsTile = document.getElementById('rewardPointsTile');
         const newMessagesTile = document.getElementById('newMessagesTile');
         const activeAnnouncementsTile = document.getElementById('activeAnnouncementsTile');
 
@@ -84,6 +88,13 @@ const appModule = {
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'chores' }
                 }));
+            });
+        }
+
+        // Reward points tile - open rewards modal
+        if (rewardPointsTile) {
+            rewardPointsTile.addEventListener('click', () => {
+                window.RoommatePortal.rewards.showRewardsModal();
             });
         }
 
