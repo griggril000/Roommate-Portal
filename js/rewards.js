@@ -644,7 +644,7 @@ const rewardsModule = {
                         <div class="text-center py-8 bg-blue-50 rounded-lg mb-6">
                             <i class="fas fa-star text-4xl text-blue-600 mb-4"></i>
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">Rewards System Not Enabled</h3>
-                            <p class="text-gray-600 mb-4">Enable the rewards system to start earning points for completing chores and redeeming rewards as a household.</p>
+                            <p class="text-gray-600 mb-4">Enable the rewards system to start earning points for completing chores and redeem rewards as a household.</p>
                             <button id="enableRewardsBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
                                 <i class="fas fa-star mr-2"></i>Enable Rewards System
                             </button>
