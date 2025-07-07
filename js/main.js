@@ -315,6 +315,15 @@ const appModule = {
             // Re-bind form events for the cloned form
             this.rebindFormEvents(formClone, section, modal);
 
+            // Set initial visibility for chore points field based on rewards status
+            if (section === 'chores') {
+                const pointsField = formClone.querySelector('input[type="number"]');
+                if (pointsField) {
+                    const rewardsEnabled = window.RoommatePortal.rewards?.isRewardsEnabled();
+                    pointsField.style.display = rewardsEnabled ? 'block' : 'none';
+                }
+            }
+
             modalContent.appendChild(title);
             modalContent.appendChild(closeBtn);
             modalContent.appendChild(formClone);
@@ -453,9 +462,11 @@ const appModule = {
         // Get form inputs by type and position for more reliable matching
         const modalInputs = modalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], textarea');
         const modalSelects = modalForm.querySelectorAll('select');
+        const modalNumberInputs = modalForm.querySelectorAll('input[type="number"]');
 
         const originalInputs = originalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], textarea');
         const originalSelects = originalForm.querySelectorAll('select');
+        const originalNumberInputs = originalForm.querySelectorAll('input[type="number"]');
 
         // Copy all inputs (text, email, datetime-local, textarea)
         modalInputs.forEach((modalInput, index) => {
@@ -468,6 +479,19 @@ const appModule = {
         modalSelects.forEach((modalSelect, index) => {
             if (originalSelects[index]) {
                 originalSelects[index].value = modalSelect.value;
+            }
+        });
+
+        // Handle number inputs specially for chores points
+        modalNumberInputs.forEach((modalInput, index) => {
+            if (originalNumberInputs[index]) {
+                // Only copy values greater than 0
+                const numValue = parseInt(modalInput.value);
+                if (!isNaN(numValue) && numValue > 0) {
+                    originalNumberInputs[index].value = numValue;
+                } else {
+                    originalNumberInputs[index].value = '';
+                }
             }
         });
 

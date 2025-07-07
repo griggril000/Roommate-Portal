@@ -26,7 +26,6 @@ const choreInput = document.getElementById('choreInput');
 const choreAssignee = document.getElementById('choreAssignee');
 const chorePoints = document.getElementById('chorePoints');
 const addChoreForm = document.getElementById('addChoreForm');
-const addChoreBtn = document.getElementById('addChoreBtn');
 const choreList = document.getElementById('choreList');
 const rewardsOptInBtn = document.getElementById('rewardsOptInBtn');
 const authorInput = document.getElementById('authorInput');
@@ -118,7 +117,6 @@ window.RoommatePortal.state = {
         choreAssignee,
         chorePoints,
         addChoreForm,
-        addChoreBtn,
         choreList,
         rewardsOptInBtn,
         authorInput,

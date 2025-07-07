@@ -214,31 +214,12 @@
                 <!-- Chore List -->
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-800">Add New Chore</h3>
+                        <h3 class="text-lg font-semibold text-gray-800">Chores</h3>
                         <button id="rewardsOptInBtn"
                             class="hidden px-3 py-1 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700 transition-colors">
                             <i class="fas fa-star mr-1"></i>Enable Rewards
                         </button>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                        <input type="text" id="choreInput"
-                            class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors"
-                            placeholder="What needs to be done?">
-                        <select id="choreAssignee"
-                            class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors">
-                            <option value="">Assign to...</option>
-                            <option value="Everyone">Everyone</option>
-                        </select>
-                        <input type="number" id="chorePoints" min="0" max="100"
-                            class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors hidden"
-                            placeholder="Points (0-100)">
-                    </div>
-
-                    <button type="button" id="addChoreBtn"
-                        class="w-full md:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
-                        <i class="fas fa-plus mr-2"></i>Add Chore
-                    </button>
                 </div>
 
                 <div id="choreList" class="space-y-4">
@@ -329,20 +310,17 @@
         <!-- Add Chore Form -->
         <form id="addChoreForm" class="space-y-4">
             <div class="grid grid-cols-1 gap-4">
-                <input type="text" id="choreInputHidden"
+                <input type="text" id="choreInput"
                     class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors"
                     placeholder="What needs to be done?">
-                <select id="choreAssigneeHidden"
+                <select id="choreAssignee"
                     class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors">
                     <option value="">Assign to...</option>
-                    <option value="Alex">Alex</option>
-                    <option value="Jordan">Jordan</option>
-                    <option value="Taylor">Taylor</option>
                     <option value="Everyone">Everyone</option>
                 </select>
-                <input type="number" id="chorePointsHidden" min="0" max="100"
-                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors hidden"
-                    placeholder="Points (0-100)">
+                <input type="number" id="chorePoints" min="1" max="100"
+                    class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:outline-none transition-colors"
+                    placeholder="Points (1-100)">
                 <button type="submit"
                     class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
                     <i class="fas fa-plus mr-2"></i>Add Chore
