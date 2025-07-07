@@ -80,7 +80,7 @@ const rewardsModule = {
             return;
         }
 
-        if (!confirm('Are you sure you want to disable the rewards system? This will reset all points and remove all rewards.')) {
+        if (!confirm('Are you sure you want to disable the rewards system? This will reset points and remove ALL rewards for the household.')) {
             return;
         }
 
@@ -275,7 +275,7 @@ const rewardsModule = {
                 return;
             }
 
-            if (!confirm(`Are you sure you want to redeem "${reward.name}" for ${reward.points} points?`)) {
+            if (!confirm(`HOUSEHOLD REWARD NOTICE: "${reward.name}" will be redeemed for the entire household using ${reward.points} shared household points.\n\n Do you want to proceed with this redemption?`)) {
                 return;
             }
 
@@ -502,7 +502,9 @@ const rewardsModule = {
         rewardsContainer.innerHTML = rewards.map(reward => `
             <div class="reward-item bg-white border rounded-lg p-4 flex items-center justify-between ${currentPoints >= reward.points ? 'border-green-300 bg-green-50' : 'border-gray-200'}">
                 <div class="flex-1">
-                    <h4 class="font-semibold text-gray-800">${reward.name}</h4>
+                    <div class="flex items-center gap-2">
+                        <h4 class="font-semibold text-gray-800">${reward.name}</h4>
+                    </div>
                     ${reward.description ? `<p class="text-gray-600 text-sm mt-1">${reward.description}</p>` : ''}
                     <div class="flex items-center space-x-2 mt-2">
                         <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
@@ -671,7 +673,8 @@ const rewardsModule = {
 
                             <!-- Add Reward Form -->
                             <div class="bg-gray-50 p-6 rounded-lg">
-                                <h3 class="text-lg font-semibold text-gray-800 mb-4">Add New Reward</h3>
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">Add New Reward</h3>
+                                <p class="text-sm text-purple-700 mb-4"><i class="fas fa-info-circle mr-1"></i> All rewards are shared by the entire household and use household points.</p>
                                 <form id="addRewardForm" class="space-y-4">
                                     <input type="text" id="rewardName" placeholder="Reward name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
                                     <input type="number" id="rewardPoints" placeholder="Points required" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
