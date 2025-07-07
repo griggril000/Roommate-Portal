@@ -17,13 +17,7 @@ const db = firebase.firestore();
 const firebaseAuth = firebase.auth();
 
 // Set Firebase Authentication persistence to local
-firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-    .then(() => {
-        console.log("Persistence set to local.");
-    })
-    .catch((error) => {
-        console.error("Error setting persistence:", error);
-    });
+firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 // Export for use in other modules
 window.RoommatePortal = window.RoommatePortal || {};

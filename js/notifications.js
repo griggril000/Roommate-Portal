@@ -34,17 +34,11 @@ const notificationsModule = {
         this.setupVisibilityHandling();
         this.restoreNotificationSettings();
         this.setupEventListeners();
-        console.log('🔔 Notifications module initialized');
     },
 
     // Check if browser supports notifications
     checkBrowserSupport() {
         const supported = 'Notification' in window;
-        if (!supported) {
-            console.warn('🔔 This browser does not support notifications');
-        } else {
-            console.log('🔔 Browser supports notifications, current permission:', Notification.permission);
-        }
         return supported;
     },
 
@@ -81,11 +75,9 @@ const notificationsModule = {
         if (this.checkBrowserSupport()) {
             const previousPermission = this.state.permission;
             this.state.permission = Notification.permission;
-            console.log('🔔 Current browser notification permission:', this.state.permission);
 
             // If permission changed from previous state, reset the prompt flag
             if (previousPermission !== 'default' && previousPermission !== this.state.permission) {
-                console.log('🔔 Permission state changed, resetting prompt flag');
                 localStorage.removeItem('roommatePortal_hasPromptedNotifications');
             }
         } else {
@@ -102,11 +94,6 @@ const notificationsModule = {
                 this.state.unreadMessageIds = new Set(settings.unreadMessageIds || []);
                 this.state.lastKnownAnnouncementCount = settings.lastKnownAnnouncementCount || 0;
                 this.state.unreadAnnouncementIds = new Set(settings.unreadAnnouncementIds || []);
-                console.log('🔔 Restored settings:', {
-                    savedEnabled: settings.enabled,
-                    currentPermission: this.state.permission,
-                    finalEnabled: this.state.isEnabled
-                });
             } catch (error) {
                 console.error('Error restoring notification settings:', error);
             }
@@ -183,16 +170,9 @@ const notificationsModule = {
 
         const checkPermissionChange = () => {
             const currentBrowserPermission = Notification.permission;
-
             if (currentBrowserPermission !== this.state.permission) {
-                console.log('🔔 Browser permission changed:', {
-                    previous: this.state.permission,
-                    current: currentBrowserPermission
-                });
-
                 // Reset prompt flag when permission changes
                 if (this.state.permission !== 'default') {
-                    console.log('🔔 Resetting prompt flag due to permission change');
                     localStorage.removeItem('roommatePortal_hasPromptedNotifications');
                 }
 
@@ -241,15 +221,12 @@ const notificationsModule = {
 
     // Request notification permission from user
     async requestPermission() {
-        console.log('🔔 Requesting notification permission...');
 
         if (!this.checkBrowserSupport()) {
-            console.error('🔔 Browser does not support notifications');
             return false;
         }
 
         // Check current permission state
-        console.log('🔔 Current permission state:', Notification.permission);
 
         try {
             let permission;
@@ -265,7 +242,6 @@ const notificationsModule = {
                 });
             }
 
-            console.log('🔔 Permission request result:', permission);
             this.state.permission = permission;
 
             // Dispatch permission change event
@@ -761,20 +737,16 @@ const notificationsModule = {
 
     // Prompt for initial notification setup when user first gets access
     async promptForInitialSetup() {
-        console.log('🔔 Checking if should prompt for initial setup...');
 
         // Only prompt if notifications are supported and permission hasn't been determined yet
         if (!this.checkBrowserSupport()) {
-            console.log('🔔 Not prompting - browser does not support notifications');
             return;
         }
 
         // Get fresh permission state
         this.state.permission = Notification.permission;
-        console.log('🔔 Current permission state:', this.state.permission);
 
         if (this.state.permission !== 'default') {
-            console.log('🔔 Not prompting - permission already determined:', this.state.permission);
             return;
         }
 
@@ -783,18 +755,14 @@ const notificationsModule = {
 
         // Only prompt if user is signed in and part of household
         if (!currentUser || !currentHousehold) {
-            console.log('🔔 Not prompting - user not signed in or no household');
             return;
         }
 
         // Check if we've already prompted this user before
         const hasPromptedBefore = localStorage.getItem('roommatePortal_hasPromptedNotifications');
         if (hasPromptedBefore) {
-            console.log('🔔 Not prompting - already prompted before');
             return;
         }
-
-        console.log('🔔 Showing notification permission modal...');
 
         // Delay the prompt slightly to let the UI settle
         setTimeout(() => {

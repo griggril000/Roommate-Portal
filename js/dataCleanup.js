@@ -192,8 +192,6 @@ const dataCleanup = {
                 // Commit all deletions
                 await deleteBatch.commit();
             }
-
-            console.log(`Cleaned up data for user ${userId} from household ${householdId}${isLastMember ? ' (last member)' : ''}`);
         } catch (error) {
             console.error('Error cleaning up user data from household:', error);
 

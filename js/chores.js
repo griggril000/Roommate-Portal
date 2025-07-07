@@ -44,11 +44,6 @@ const choresModule = {
         const elements = window.RoommatePortal.state.elements;
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
 
-        console.log('Updating rewards UI:', {
-            currentHousehold: !!currentHousehold,
-            rewardsEnabled: window.RoommatePortal.rewards?.isRewardsEnabled()
-        });
-
         if (!currentHousehold) {
             // Hide rewards elements when no household
             if (elements.rewardsOptInBtn) elements.rewardsOptInBtn.classList.add('hidden');
