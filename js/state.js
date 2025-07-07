@@ -13,7 +13,6 @@ let messages = JSON.parse(localStorage.getItem('roommatePortal_messages')) || []
 let announcements = JSON.parse(localStorage.getItem('roommatePortal_announcements')) || [];
 let rewards = [];
 let rewardTransactions = [];
-let events = [];
 
 // Firestore listeners (to manage cleanup)
 let choresListener = null;
@@ -21,7 +20,6 @@ let messagesListener = null;
 let announcementsListener = null;
 let rewardsListener = null;
 let rewardTransactionsListener = null;
-let eventsListener = null;
 
 // DOM elements - Core
 const choreInput = document.getElementById('choreInput');
@@ -98,9 +96,6 @@ window.RoommatePortal.state = {
     getRewardTransactions: () => rewardTransactions,
     setRewardTransactions: (transactionsList) => { rewardTransactions = transactionsList; },
 
-    getEvents: () => events,
-    setEvents: (eventList) => { events = eventList; },
-
     // Listeners
     getChoresListener: () => choresListener,
     setChoresListener: (listener) => { choresListener = listener; },
@@ -116,9 +111,6 @@ window.RoommatePortal.state = {
 
     getRewardTransactionsListener: () => rewardTransactionsListener,
     setRewardTransactionsListener: (listener) => { rewardTransactionsListener = listener; },
-
-    getEventsListener: () => eventsListener,
-    setEventsListener: (listener) => { eventsListener = listener; },
 
     // DOM elements
     elements: {

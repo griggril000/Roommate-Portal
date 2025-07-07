@@ -16,6 +16,8 @@ const appModule = {
 
     // Initialize all application components
     initializeApp() {
+        console.log('🚀 Initializing Roommate Portal...');
+
         try {
             // Initialize UI first
             window.RoommatePortal.ui.initializeApp();
@@ -34,14 +36,13 @@ const appModule = {
             // Initialize rewards system
             window.RoommatePortal.rewards.init();
 
-            // Initialize calendar module
-            window.RoommatePortal.calendar.init();
-
             // Initialize notifications module
             window.RoommatePortal.notifications.init();
 
             // Setup global click handlers for tabs
             this.setupTabHandlers();
+
+            console.log('✅ Roommate Portal initialized successfully!');
         } catch (error) {
             console.error('❌ Error initializing Roommate Portal:', error);
             window.RoommatePortal.utils.showNotification('❌ Application failed to initialize. Please refresh the page.');
@@ -66,7 +67,6 @@ const appModule = {
         const rewardPointsTile = document.getElementById('rewardPointsTile');
         const newMessagesTile = document.getElementById('newMessagesTile');
         const activeAnnouncementsTile = document.getElementById('activeAnnouncementsTile');
-        const calendarEventsTile = document.getElementById('calendarEventsTile');
 
         // Chores tile - navigate to chores
         if (choresTile) {
@@ -107,17 +107,6 @@ const appModule = {
                 }));
             });
         }
-
-        // Calendar events tile - navigate to calendar
-        if (calendarEventsTile) {
-            calendarEventsTile.addEventListener('click', () => {
-                window.RoommatePortal.utils.switchTab('calendar');
-                setTimeout(() => this.createFAB('calendar'), 100);
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'calendar' }
-                }));
-            });
-        }
     },
 
     // Setup "Back to Dashboard" buttons
@@ -125,7 +114,6 @@ const appModule = {
         const backToDashboardFromChores = document.getElementById('backToDashboardFromChores');
         const backToDashboardFromMessages = document.getElementById('backToDashboardFromMessages');
         const backToDashboardFromAnnouncements = document.getElementById('backToDashboardFromAnnouncements');
-        const backToDashboardFromCalendar = document.getElementById('backToDashboardFromCalendar');
 
         // Back to dashboard from chores
         if (backToDashboardFromChores) {
@@ -160,21 +148,6 @@ const appModule = {
         // Back to dashboard from announcements
         if (backToDashboardFromAnnouncements) {
             backToDashboardFromAnnouncements.addEventListener('click', () => {
-                window.RoommatePortal.utils.switchTab('dashboard');
-                // Remove FAB when returning to dashboard
-                if (this.currentFAB) {
-                    this.currentFAB.remove();
-                    this.currentFAB = null;
-                }
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'dashboard' }
-                }));
-            });
-        }
-
-        // Back to dashboard from calendar
-        if (backToDashboardFromCalendar) {
-            backToDashboardFromCalendar.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('dashboard');
                 // Remove FAB when returning to dashboard
                 if (this.currentFAB) {
@@ -247,7 +220,6 @@ const appModule = {
 
     // Open input modal
     openInputModal(section) {
-
         // Create modal overlay
         const modal = document.createElement('div');
         modal.className = 'input-modal';
@@ -413,8 +385,7 @@ const appModule = {
         const titles = {
             'chores': 'Add New Chore',
             'messages': 'Post New Message',
-            'announcements': 'Create Announcement',
-            'calendar': 'Add New Event'
+            'announcements': 'Create Announcement'
         };
         return titles[section] || 'Add New Item';
     },
@@ -424,10 +395,8 @@ const appModule = {
         const formIds = {
             'chores': 'addChoreForm',
             'messages': 'postMessageForm',
-            'announcements': 'postAnnouncementForm',
-            'calendar': 'addEventForm'
+            'announcements': 'postAnnouncementForm'
         };
-
 
         const formId = formIds[section];
         return formId ? document.getElementById(formId) : null;
@@ -500,6 +469,12 @@ const appModule = {
             if (originalSelects[index]) {
                 originalSelects[index].value = modalSelect.value;
             }
+        });
+
+        console.log(`Form data copied for ${section}:`, {
+            textInputs: modalInputs.length,
+            selects: modalSelects.length,
+            datetimeInputs: modalForm.querySelectorAll('input[type="datetime-local"]').length
         });
     },
 

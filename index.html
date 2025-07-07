@@ -191,22 +191,6 @@
                             <i class="fas fa-arrow-right mr-1"></i>Click to view announcements
                         </div>
                     </div>
-
-                    <div id="calendarEventsTile"
-                        class="dashboard-tile bg-green-600 rounded-lg p-5 text-white cursor-pointer hover:bg-green-700 transition-colors duration-200 transform hover:scale-105">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-green-100 text-base font-medium mb-2">Upcoming Events</p>
-                                <p class="text-3xl font-bold" id="upcomingEventsCount">0</p>
-                            </div>
-                            <div class="bg-green-500 p-2.5 rounded-lg">
-                                <i class="fas fa-calendar-alt text-xl"></i>
-                            </div>
-                        </div>
-                        <div class="mt-3 text-green-100 text-sm">
-                            <i class="fas fa-arrow-right mr-1"></i>Click to view calendar
-                        </div>
-                    </div>
                 </div>
             </div>
         </section>
@@ -308,57 +292,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- Calendar Section -->
-        <section id="calendarSection" class="tab-content hidden">
-            <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 border border-gray-100">
-                <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
-                    <div class="flex items-center space-x-3">
-                        <div class="bg-blue-100 p-3 rounded-xl">
-                            <i class="fas fa-calendar-alt text-blue-600 text-xl"></i>
-                        </div>
-                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Calendar</h2>
-                    </div>
-                    <button id="backToDashboardFromCalendar"
-                        class="w-full md:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                    </button>
-                </div>
-
-                <!-- Event Filters -->
-                <div class="flex flex-wrap gap-2 mb-6">
-                    <button class="event-filter px-3 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium"
-                        data-category="all">
-                        All Events
-                    </button>
-                    <button class="event-filter px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 text-sm font-medium"
-                        data-category="social">
-                        <i class="fas fa-users mr-1"></i>Social
-                    </button>
-                    <button class="event-filter px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 text-sm font-medium"
-                        data-category="chore">
-                        <i class="fas fa-broom mr-1"></i>Chores
-                    </button>
-                    <button class="event-filter px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 text-sm font-medium"
-                        data-category="bill">
-                        <i class="fas fa-dollar-sign mr-1"></i>Bills
-                    </button>
-                    <button class="event-filter px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 text-sm font-medium"
-                        data-category="shopping">
-                        <i class="fas fa-shopping-cart mr-1"></i>Shopping
-                    </button>
-                    <button class="event-filter px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 text-sm font-medium"
-                        data-category="other">
-                        <i class="fas fa-calendar mr-1"></i>Other
-                    </button>
-                </div>
-
-                <!-- Event List -->
-                <div id="eventList" class="space-y-4">
-                    <!-- Events will be dynamically added here -->
-                </div>
-            </div>
-        </section>
     </main>
 
     <!-- Footer -->
@@ -453,143 +386,6 @@
                 </button>
             </div>
         </form>
-
-        <!-- Add Event Form (Hidden form for FAB system) -->
-        <form id="addEventForm" class="space-y-4">
-            <div class="grid grid-cols-1 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-                    <input type="text" id="eventTitleHidden"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter event title" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                    <input type="date" id="eventDateHidden"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        required>
-                </div>
-                <div class="flex items-center mb-2">
-                    <input type="checkbox" id="eventAllDayHidden"
-                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                    <label class="ml-2 block text-sm text-gray-700">All day event</label>
-                </div>
-                <div id="timeFieldContainerHidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                    <input type="time" id="eventTimeHidden"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select id="eventCategoryHidden"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="social">Social</option>
-                        <option value="chore">Chore</option>
-                        <option value="bill">Bill</option>
-                        <option value="shopping">Shopping</option>
-                        <option value="other" selected>Other</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-                    <textarea id="eventDescriptionHidden"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        rows="3" placeholder="Add event details"></textarea>
-                </div>
-                <button type="submit"
-                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Add Event
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Event Details Modal -->
-    <div id="eventDetailsModal" class="fixed inset-0 bg-gray-800 bg-opacity-40 flex items-center justify-center hidden"
-        aria-hidden="true" tabindex="-1">
-        <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-gray-800" id="eventDetailsTitle">Event Title</h2>
-                <button class="text-gray-500 hover:text-gray-700"
-                    onclick="document.getElementById('eventDetailsModal').classList.add('hidden')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <p class="text-gray-600" id="eventDetailsDate">Event Date</p>
-                    <p class="text-sm text-gray-500" id="eventDetailsCreator">Created by</p>
-                </div>
-                <div>
-                    <h3 class="text-lg font-medium text-gray-800">Description</h3>
-                    <p class="text-gray-600" id="eventDetailsDescription">No description provided</p>
-                </div>
-                <button id="eventDetailsDeleteBtn"
-                    class="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors hidden">
-                    <i class="fas fa-trash-alt mr-2"></i>Delete Event
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Event Modal -->
-    <div id="addEventModal" class="fixed inset-0 bg-gray-800 bg-opacity-40 flex items-center justify-center hidden"
-        aria-hidden="true" tabindex="-1">
-        <div class="bg-white rounded-lg shadow-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-gray-800">Add New Event</h2>
-                <button class="text-gray-500 hover:text-gray-700"
-                    onclick="document.getElementById('addEventModal').classList.add('hidden'); const existingFabModal = document.querySelector('.input-modal'); if (existingFabModal) existingFabModal.remove();">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <form id="addEventModalForm" class="space-y-4">
-                <div>
-                    <label for="eventTitle" class="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-                    <input type="text" id="eventTitle"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter event title" required>
-                </div>
-                <div>
-                    <label for="eventDate" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                    <input type="date" id="eventDate"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        required>
-                </div>
-                <div class="flex items-center mb-2">
-                    <input type="checkbox" id="eventAllDay"
-                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                    <label for="eventAllDay" class="ml-2 block text-sm text-gray-700">All day event</label>
-                </div>
-                <div id="timeFieldContainer">
-                    <label for="eventTime" class="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                    <input type="time" id="eventTime"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="eventCategory" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select id="eventCategory"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="social">Social</option>
-                        <option value="chore">Chore</option>
-                        <option value="bill">Bill</option>
-                        <option value="shopping">Shopping</option>
-                        <option value="other" selected>Other</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="eventDescription" class="block text-sm font-medium text-gray-700 mb-1">Description
-                        (Optional)</label>
-                    <textarea id="eventDescription"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        rows="3" placeholder="Add event details"></textarea>
-                </div>
-                <button type="submit"
-                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Add Event
-                </button>
-            </form>
-        </div>
     </div>
 
     <!-- Firebase SDKs -->
@@ -612,7 +408,6 @@
     <script src="js/ui.js"></script>
     <script src="js/dataCleanup.js"></script>
     <script src="js/householdManagement.js"></script>
-    <script src="js/calendar.js"></script>
     <script src="js/main.js"></script>
 </body>
 

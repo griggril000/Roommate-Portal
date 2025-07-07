@@ -189,14 +189,12 @@ const utils = {
         const choreSection = document.getElementById('choreSection');
         const messageSection = document.getElementById('messageSection');
         const announcementsSection = document.getElementById('announcementsSection');
-        const calendarSection = document.getElementById('calendarSection');
 
         // Hide all sections
         if (dashboardSection) dashboardSection.className = "tab-content hidden";
         if (choreSection) choreSection.className = "tab-content hidden";
         if (messageSection) messageSection.className = "tab-content hidden";
         if (announcementsSection) announcementsSection.className = "tab-content hidden";
-        if (calendarSection) calendarSection.className = "tab-content hidden";
 
         // Show selected section
         if (tabName === 'dashboard') {
@@ -207,8 +205,6 @@ const utils = {
             if (messageSection) messageSection.className = "tab-content";
         } else if (tabName === 'announcements') {
             if (announcementsSection) announcementsSection.className = "tab-content";
-        } else if (tabName === 'calendar') {
-            if (calendarSection) calendarSection.className = "tab-content";
         }
 
         // Dispatch tab switch event for notification system
