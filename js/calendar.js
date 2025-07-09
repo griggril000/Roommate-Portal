@@ -230,8 +230,9 @@ const calendarModule = {
             'July', 'August', 'September', 'October', 'November', 'December'];
         currentMonthYear.textContent = `${monthNames[this.currentDate.getMonth()]} ${this.currentDate.getFullYear()}`;
 
-        // Clear calendar
+        // Clear calendar and set up container
         calendarGrid.innerHTML = '';
+        calendarGrid.className = 'calendar-container bg-gray-100 p-4 rounded-lg';
 
         // Get first day of month and number of days
         const firstDay = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
@@ -240,60 +241,90 @@ const calendarModule = {
         const startingDayOfWeek = firstDay.getDay();
 
         // Add day headers
+        const headerRow = document.createElement('div');
+        headerRow.className = 'calendar-header-row grid grid-cols-7 gap-1 mb-1';
+
         const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         dayHeaders.forEach(day => {
             const dayHeader = document.createElement('div');
             dayHeader.className = 'calendar-day-header text-center font-semibold text-gray-600 py-2';
             dayHeader.textContent = day;
-            calendarGrid.appendChild(dayHeader);
+            headerRow.appendChild(dayHeader);
         });
+        calendarGrid.appendChild(headerRow);
 
-        // Add empty cells for days before the first day of the month
-        for (let i = 0; i < startingDayOfWeek; i++) {
-            const emptyDay = document.createElement('div');
-            emptyDay.className = 'calendar-day calendar-day-empty';
-            calendarGrid.appendChild(emptyDay);
-        }
+        // Create array to store day elements for multi-day event rendering
+        const dayElements = [];
+        const totalCells = startingDayOfWeek + daysInMonth;
+        const weeks = Math.ceil(totalCells / 7);        // Create week rows
+        for (let week = 0; week < weeks; week++) {
+            const weekRow = document.createElement('div');
+            weekRow.className = 'calendar-week-row grid grid-cols-7 gap-1 mb-1 relative';
+            weekRow.style.minHeight = '140px';
 
-        // Add days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dayElement = document.createElement('div');
-            dayElement.className = 'calendar-day cursor-pointer hover:bg-gray-100 transition-colors';
+            // Add 7 days to this week row
+            for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+                const cellIndex = week * 7 + dayOfWeek;
+                const dayNumber = cellIndex - startingDayOfWeek + 1;
 
-            const currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), day);
-            const isToday = this.isToday(currentDate);
+                if (cellIndex < startingDayOfWeek || dayNumber > daysInMonth) {
+                    // Empty cell (before first day or after last day)
+                    const emptyDay = document.createElement('div');
+                    emptyDay.className = 'calendar-day calendar-day-empty relative';
+                    weekRow.appendChild(emptyDay);
+                    dayElements.push({ element: emptyDay, date: null, dayNumber: null, row: week, col: dayOfWeek });
+                } else {
+                    // Actual day cell
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'calendar-day cursor-pointer hover:bg-gray-100 transition-colors relative';
 
-            if (isToday) {
-                dayElement.classList.add('calendar-day-today');
+                    const currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), dayNumber);
+                    const isToday = this.isToday(currentDate);
+
+                    if (isToday) {
+                        dayElement.classList.add('calendar-day-today');
+                    }
+
+                    // Get single-day events for this day (multi-day events will be handled separately)
+                    const singleDayEvents = this.getSingleDayEventsForDay(currentDate);
+                    const maxSingleDayEvents = 3;
+                    const displayedSingleDayEvents = singleDayEvents.slice(0, maxSingleDayEvents);
+                    const hasMoreSingleDayEvents = singleDayEvents.length > maxSingleDayEvents;
+
+                    dayElement.innerHTML = `
+                        <div class="calendar-day-number ${isToday ? 'font-bold text-blue-600' : 'text-gray-700'}">${dayNumber}</div>
+                        <div class="calendar-day-events">
+                            ${displayedSingleDayEvents.map(event => `
+                                <div class="calendar-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'}" 
+                                     title="${event.title}${event.description ? ' - ' + event.description : ''}"
+                                     data-event-id="${event.id}">
+                                    ${event.privacy === 'private' ? '🔒' : '👥'} ${event.title}
+                                </div>
+                            `).join('')}
+                            ${hasMoreSingleDayEvents ? `<div class="calendar-view-all-btn">+${singleDayEvents.length - maxSingleDayEvents} more...</div>` : ''}
+                        </div>
+                    `;
+
+                    // Add click handler using event delegation
+                    dayElement.addEventListener('click', (e) => {
+                        // Prevent event bubbling issues
+                        e.stopPropagation();
+
+                        // Get all events for this day (including multi-day)
+                        const allDayEvents = this.getEventsForDay(currentDate);
+                        this.showDayEvents(currentDate, allDayEvents);
+                    });
+
+                    weekRow.appendChild(dayElement);
+                    dayElements.push({ element: dayElement, date: currentDate, dayNumber: dayNumber, row: week, col: dayOfWeek });
+                }
             }
 
-            // Get events for this day
-            const dayEvents = this.getEventsForDay(currentDate);
-
-            dayElement.innerHTML = `
-                <div class="calendar-day-number ${isToday ? 'font-bold text-blue-600' : 'text-gray-700'}">${day}</div>
-                <div class="calendar-day-events">
-                    ${dayEvents.map(event => `
-                        <div class="calendar-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'}" 
-                             title="${event.title}${event.description ? ' - ' + event.description : ''}"
-                             data-event-id="${event.id}">
-                            ${event.privacy === 'private' ? '🔒' : '👥'} ${event.title}
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-
-            // Add click handler using event delegation
-            dayElement.addEventListener('click', (e) => {
-                // Prevent event bubbling issues
-                e.stopPropagation();
-
-                // Both day and event clicks show the day modal
-                this.showDayEvents(currentDate, dayEvents);
-            });
-
-            calendarGrid.appendChild(dayElement);
+            calendarGrid.appendChild(weekRow);
         }
+
+        // Now render multi-day events as spanning elements
+        this.renderMultiDayEvents(dayElements);
     },
 
     // Check if date is today
@@ -325,6 +356,250 @@ const calendarModule = {
         return filteredEvents;
     },
 
+    // Get single-day events for a specific day (excludes multi-day events)
+    getSingleDayEventsForDay(date) {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+
+        const filteredEvents = this.events.filter(event => {
+            const eventStart = this.parseLocalDateTimeString(event.startDate);
+            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+
+            // Check if event occurs on this day and is single-day
+            const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+            const eventEndDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
+            const isSingleDay = eventStartDate.getTime() === eventEndDate.getTime();
+            const eventOnDay = eventStartDate.getTime() === date.getTime();
+
+            // Filter private events (only show to creator)
+            if (event.privacy === 'private' && event.createdBy !== currentUser?.uid) {
+                return false;
+            }
+
+            return eventOnDay && isSingleDay;
+        });
+
+        return filteredEvents;
+    },    // Render multi-day events as spanning elements
+    renderMultiDayEvents(dayElements) {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        const maxDisplayedEvents = 3; // Maximum number of multi-day events to display
+
+        // Get all multi-day events that intersect with this month
+        const multiDayEvents = this.events.filter(event => {
+            const eventStart = this.parseLocalDateTimeString(event.startDate);
+            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+
+            // Check if it's a multi-day event
+            const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+            const eventEndDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
+            const isMultiDay = eventStartDate.getTime() !== eventEndDate.getTime();
+
+            // Filter private events (only show to creator)
+            if (event.privacy === 'private' && event.createdBy !== currentUser?.uid) {
+                return false;
+            }
+
+            // Check if event intersects with current month
+            const monthStart = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+            const monthEnd = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0);
+            const intersectsMonth = eventStartDate <= monthEnd && eventEndDate >= monthStart;
+
+            return isMultiDay && intersectsMonth;
+        });
+
+        console.log('Calendar: Found', multiDayEvents.length, 'multi-day events to render');
+
+        // Sort events by start date to prioritize earlier events
+        multiDayEvents.sort((a, b) => {
+            const aStart = this.parseLocalDateTimeString(a.startDate);
+            const bStart = this.parseLocalDateTimeString(b.startDate);
+            return aStart - bStart;
+        });
+
+        // Limit the number of events displayed
+        const eventsToDisplay = multiDayEvents.slice(0, maxDisplayedEvents);
+        const hasMoreEvents = multiDayEvents.length > maxDisplayedEvents;
+
+        // Group events by rows to avoid overlaps
+        const eventRows = [];
+
+        eventsToDisplay.forEach(event => {
+            const eventStart = this.parseLocalDateTimeString(event.startDate);
+            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+
+            console.log('Calendar: Processing multi-day event:', event.title,
+                'Start:', eventStart.toLocaleDateString(),
+                'End:', eventEnd.toLocaleDateString());
+
+            // Find the start and end indices in the dayElements array
+            let startIndex = -1;
+            let endIndex = -1;
+
+            for (let i = 0; i < dayElements.length; i++) {
+                const dayElement = dayElements[i];
+                if (dayElement.date) {
+                    const dayDate = new Date(dayElement.date.getFullYear(), dayElement.date.getMonth(), dayElement.date.getDate());
+                    const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+                    const eventEndDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
+
+                    if (startIndex === -1 && dayDate >= eventStartDate) {
+                        startIndex = i;
+                    }
+                    if (dayDate <= eventEndDate) {
+                        endIndex = i;
+                    }
+                }
+            }
+
+            if (startIndex !== -1 && endIndex !== -1) {
+                // Find an available row for this event
+                let rowIndex = 0;
+                while (eventRows[rowIndex] && this.eventsOverlap(eventRows[rowIndex], startIndex, endIndex)) {
+                    rowIndex++;
+                }
+
+                if (!eventRows[rowIndex]) {
+                    eventRows[rowIndex] = [];
+                }
+
+                eventRows[rowIndex].push({
+                    event,
+                    startIndex,
+                    endIndex,
+                    rowIndex
+                });
+            }
+        });
+
+        // Render each event row
+        eventRows.forEach((row, rowIndex) => {
+            row.forEach(eventInfo => {
+                this.renderSpanningEvent(eventInfo, dayElements);
+            });
+        });
+
+        // Add "View All" indicator if there are more events
+        if (hasMoreEvents) {
+            this.addViewAllIndicator(dayElements, eventRows.length, multiDayEvents.length - maxDisplayedEvents);
+        }
+    },
+
+    // Add "View All" indicator when there are more events than displayed
+    addViewAllIndicator(dayElements, lastRowIndex, hiddenEventsCount) {
+        // Find the first day that has events to place the indicator
+        const firstDayWithEvents = dayElements.find(elem => elem.date && this.getEventsForDay(elem.date).length > 0);
+
+        if (!firstDayWithEvents) return;
+
+        const weekRow = firstDayWithEvents.element.parentElement;
+        if (!weekRow) return;
+
+        // Create view all indicator
+        const viewAllIndicator = document.createElement('div');
+        viewAllIndicator.className = 'calendar-spanning-event calendar-view-all-indicator';
+        viewAllIndicator.style.left = '2%';
+        viewAllIndicator.style.width = '96%';
+        viewAllIndicator.style.top = `${28 + (lastRowIndex * 28)}px`;
+        viewAllIndicator.style.textAlign = 'center';
+        viewAllIndicator.style.background = '#f9fafb';
+        viewAllIndicator.style.color = '#6b7280';
+        viewAllIndicator.style.border = '1px dashed #d1d5db';
+        viewAllIndicator.style.fontSize = '11px';
+        viewAllIndicator.style.fontStyle = 'italic';
+        viewAllIndicator.style.zIndex = '40'; // Slightly lower than regular events
+
+        viewAllIndicator.innerHTML = `+${hiddenEventsCount} more event${hiddenEventsCount === 1 ? '' : 's'}...`;
+        viewAllIndicator.title = 'Click any day to view all events';
+
+        weekRow.appendChild(viewAllIndicator);
+    },
+
+    // Check if two events overlap in their date ranges
+    eventsOverlap(existingEvents, newStartIndex, newEndIndex) {
+        return existingEvents.some(event => {
+            return !(newEndIndex < event.startIndex || newStartIndex > event.endIndex);
+        });
+    },
+
+    // Render a single spanning event
+    renderSpanningEvent(eventInfo, dayElements) {
+        const { event, startIndex, endIndex, rowIndex } = eventInfo;
+
+        // Find the week row elements
+        const startElement = dayElements[startIndex];
+        const endElement = dayElements[endIndex];
+
+        if (!startElement || !endElement) return;
+
+        // Handle events that span across weeks
+        const startWeek = startElement.row;
+        const endWeek = endElement.row;
+
+        if (startWeek === endWeek) {
+            // Event is within a single week
+            this.createSpanningEventElement(event, startElement, endElement, rowIndex, false, false);
+        } else {
+            // Event spans multiple weeks - create separate elements for each week
+            for (let week = startWeek; week <= endWeek; week++) {
+                // Find start and end elements for this week segment
+                const weekElements = dayElements.filter(elem => elem.row === week);
+                const segmentStart = week === startWeek ? startElement : weekElements.find(elem => elem.date !== null);
+                const segmentEnd = week === endWeek ? endElement : weekElements[weekElements.length - 1];
+
+                if (segmentStart && segmentEnd) {
+                    const isFirstSegment = week === startWeek;
+                    const isLastSegment = week === endWeek;
+                    this.createSpanningEventElement(event, segmentStart, segmentEnd, rowIndex, !isFirstSegment, !isLastSegment);
+                }
+            }
+        }
+    },
+
+    // Create a spanning event element
+    createSpanningEventElement(event, startElement, endElement, rowIndex, showStartEllipsis, showEndEllipsis) {
+        const startCol = startElement.col;
+        const endCol = endElement.col;
+        const weekRow = startElement.element.parentElement;
+
+        if (!weekRow) return;
+
+        console.log('Calendar: Creating spanning event:', event.title, 'from col', startCol, 'to col', endCol, 'row', rowIndex);
+
+        // Create the spanning event element
+        const spanningEvent = document.createElement('div');
+        spanningEvent.className = `calendar-spanning-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'}`;        // Calculate position and size
+        const left = (startCol / 7) * 100;
+        const width = ((endCol - startCol + 1) / 7) * 100;
+        const top = 28 + (rowIndex * 28); // Better spacing and positioning
+
+        spanningEvent.style.left = `${left}%`;
+        spanningEvent.style.width = `${width}%`;
+        spanningEvent.style.top = `${top}px`;
+        spanningEvent.style.zIndex = '50'; // Ensure high z-index
+
+        console.log('Calendar: Event positioned at', left + '%', 'width', width + '%', 'top', top + 'px');
+
+        // Set content with ellipsis for continuation
+        let displayText = `${event.privacy === 'private' ? '🔒' : '👥'} ${event.title}`;
+        if (showStartEllipsis) displayText = '← ' + displayText;
+        if (showEndEllipsis) displayText = displayText + ' →';
+
+        spanningEvent.innerHTML = displayText;
+        spanningEvent.title = `${event.title}${event.description ? ' - ' + event.description : ''}`;
+        spanningEvent.dataset.eventId = event.id;
+
+        // Add click handler
+        spanningEvent.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const eventStartDate = this.parseLocalDateTimeString(event.startDate);
+            const clickDate = new Date(eventStartDate.getFullYear(), eventStartDate.getMonth(), eventStartDate.getDate());
+            const allDayEvents = this.getEventsForDay(clickDate);
+            this.showDayEvents(clickDate, allDayEvents);
+        });
+
+        weekRow.appendChild(spanningEvent);
+    },
+
     // Show day events in a modal
     showDayEvents(date, events) {
 
@@ -354,8 +629,32 @@ const calendarModule = {
                 eventElement.className = `event-item p-4 border rounded-lg mb-3 ${event.privacy === 'private' ? 'border-purple-200 bg-purple-50' : 'border-green-200 bg-green-50'
                     }`;
 
-                const startTime = this.parseLocalDateTimeString(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const endTime = this.parseLocalDateTimeString(event.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const startDateTime = this.parseLocalDateTimeString(event.startDate);
+                const endDateTime = this.parseLocalDateTimeString(event.endDate);
+
+                // Check if event spans multiple days
+                const startDate = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate());
+                const endDate = new Date(endDateTime.getFullYear(), endDateTime.getMonth(), endDateTime.getDate());
+                const spansMultipleDays = startDate.getTime() !== endDate.getTime();
+
+                let timeDisplay;
+                if (spansMultipleDays) {
+                    // Show full date and time for multi-day events
+                    const startDateStr = startDateTime.toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric'
+                    });
+                    const startTimeStr = startDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const endDateStr = endDateTime.toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric'
+                    });
+                    const endTimeStr = endDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    timeDisplay = `<i class="fas fa-calendar-week text-gray-500 mr-1"></i>${startDateStr}, ${startTimeStr} - ${endDateStr} ${endTimeStr}`;
+                } else {
+                    // Show just times for same-day events
+                    const startTime = startDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const endTime = endDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    timeDisplay = `<i class="fas fa-clock text-gray-500 mr-1"></i>${startTime} - ${endTime}`;
+                }
 
                 eventElement.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
@@ -371,7 +670,7 @@ const calendarModule = {
                             </button>
                         </div>
                     </div>
-                    <p class="text-gray-600 mb-2">${startTime} - ${endTime}</p>
+                    <p class="text-gray-600 mb-2">${timeDisplay}</p>
                     ${event.description ? `<p class="text-gray-700">${window.RoommatePortal.utils.escapeHtml(event.description)}</p>` : ''}
                     <p class="text-sm text-gray-500 mt-2">Created by: ${window.RoommatePortal.utils.escapeHtml(event.createdByName)}</p>
                 `;
@@ -638,8 +937,6 @@ const calendarModule = {
         const currentUser = window.RoommatePortal.state.getCurrentUser();
         const now = new Date();
         const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-        console.log('Calendar: Updating stats. Current time:', now.toLocaleString());
 
         // Count upcoming events (next 7 days including events happening today)
         const upcomingEvents = this.events.filter(event => {

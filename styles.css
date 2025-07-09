@@ -349,6 +349,26 @@ header {
 }
 
 /* Calendar Styles */
+.calendar-container {
+    min-height: 400px;
+    position: relative;
+    z-index: 0;
+    /* Base layer */
+}
+
+.calendar-header-row {
+    margin-bottom: 4px;
+}
+
+.calendar-week-row {
+    margin-bottom: 4px;
+    position: relative;
+    min-height: 140px;
+    /* Increased height for better spacing */
+    z-index: 10;
+    /* Ensure week rows are positioned properly */
+}
+
 .calendar-grid {
     min-height: 400px;
 }
@@ -356,10 +376,14 @@ header {
 .calendar-day {
     background: white;
     border: 1px solid #e5e7eb;
-    min-height: 100px;
+    min-height: 140px;
+    /* Increased height for better spacing */
     padding: 8px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+    /* Allow spanning events to overflow */
+    z-index: 1;
+    /* Lower z-index to stay behind spanning events */
 }
 
 .calendar-day:hover {
@@ -395,6 +419,9 @@ header {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    margin-top: 110px;
+    /* Much more space for spanning events */
+    /* Leave even more space for spanning events */
 }
 
 .calendar-event {
@@ -407,7 +434,8 @@ header {
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
-    z-index: 1;
+    z-index: 2;
+    /* Above day cells but below spanning events */
 }
 
 .calendar-event:hover {
@@ -427,6 +455,75 @@ header {
     border: 1px solid #e9d5ff;
 }
 
+/* Spanning Events */
+.calendar-spanning-event {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: absolute;
+    z-index: 50;
+    /* Increased z-index to appear above day cells */
+    height: 24px;
+    /* Increased height for better spacing */
+    line-height: 18px;
+    margin: 2px 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    /* Stronger shadow for better visibility */
+    font-weight: 500;
+}
+
+.calendar-spanning-event:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    /* Even higher z-index on hover */
+}
+
+.calendar-spanning-event.calendar-event-shared {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    border-left: 3px solid #16a34a;
+    /* Emphasize left border */
+}
+
+.calendar-spanning-event.calendar-event-private {
+    background: #faf5ff;
+    color: #7c3aed;
+    border: 1px solid #e9d5ff;
+    border-left: 3px solid #8b5cf6;
+    /* Emphasize left border */
+}
+
+/* Multi-day event specific styling */
+.calendar-spanning-event::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.calendar-spanning-event.calendar-event-shared::before {
+    background: #16a34a;
+}
+
+.calendar-spanning-event.calendar-event-private::before {
+    background: #8b5cf6;
+}
+
+/* Ensure calendar grid rows have proper positioning for spanning events */
+.calendar-grid>.calendar-day {
+    position: relative;
+}
+
 .event-item {
     position: relative;
 }
@@ -444,6 +541,35 @@ header {
 .event-item .edit-event-btn:hover,
 .event-item .delete-event-btn:hover {
     background: rgba(0, 0, 0, 0.1);
+}
+
+/* View All button for days with many events */
+.calendar-view-all-btn {
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    margin-top: 2px;
+    font-style: italic;
+}
+
+.calendar-view-all-btn:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* View All indicator for multi-day events */
+.calendar-view-all-indicator {
+    cursor: default !important;
+}
+
+.calendar-view-all-indicator:hover {
+    transform: none !important;
 }
 
 /* Responsive calendar */
