@@ -43,7 +43,7 @@ const messagesModule = {
     },
 
     // Handle post message form submission
-    handlePostMessage(e) {
+    async handlePostMessage(e) {
         e.preventDefault();
 
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
@@ -59,28 +59,34 @@ const messagesModule = {
         const messageText = elements.messageInput.value.trim();
 
         if (author && messageText) {
-            const message = {
-                author: author,
-                text: messageText,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                householdId: currentHousehold.id,
-                authorId: currentUser.uid,
-                // Track which users have read this message (author has read it by default)
-                readBy: [currentUser.uid]
-            };
+            try {
+                // Encrypt the message content
+                const encryptedMessage = await window.RoommatePortal.encryption.encryptSensitiveData({
+                    text: messageText
+                }, ['text']);
 
-            // Add to Firestore
-            const { db } = window.RoommatePortal.config;
-            db.collection('messages').add(message)
-                .then(() => {
-                    // Clear message input but keep author name
-                    elements.messageInput.value = '';
-                    window.RoommatePortal.utils.showNotification('📝 Message posted successfully!');
-                })
-                .catch(error => {
-                    console.error('Error posting message:', error);
-                    window.RoommatePortal.utils.showNotification('❌ Failed to post message. Please try again.');
-                });
+                const message = {
+                    author: author,
+                    text: encryptedMessage.text,
+                    text_encrypted: encryptedMessage.text_encrypted,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    householdId: currentHousehold.id,
+                    authorId: currentUser.uid,
+                    // Track which users have read this message (author has read it by default)
+                    readBy: [currentUser.uid]
+                };
+
+                // Add to Firestore
+                const { db } = window.RoommatePortal.config;
+                await db.collection('messages').add(message);
+
+                // Clear message input but keep author name
+                elements.messageInput.value = '';
+                window.RoommatePortal.utils.showNotification('📝 Message posted successfully!');
+            } catch (error) {
+                console.error('Error posting message:', error);
+                window.RoommatePortal.utils.showNotification('❌ Failed to post message. Please try again.');
+            }
         }
     },
 
@@ -100,8 +106,17 @@ const messagesModule = {
 
         const listener = db.collection('messages')
             .where('householdId', '==', currentHousehold.id)
-            .onSnapshot((snapshot) => {
+            .onSnapshot(async (snapshot) => {
                 let messagesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Decrypt message content
+                try {
+                    messagesList = await window.RoommatePortal.encryption.decryptDataArray(messagesList, ['text']);
+                } catch (error) {
+                    console.error('Error decrypting messages:', error);
+                    window.RoommatePortal.utils.showNotification('⚠️ Some messages could not be decrypted.');
+                }
+
                 // Sort messages in JavaScript instead of Firestore to avoid index issues
                 messagesList.sort((a, b) => {
                     const aTime = a.timestamp ? a.timestamp.seconds : 0;

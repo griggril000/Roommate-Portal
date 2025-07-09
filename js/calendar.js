@@ -70,7 +70,7 @@ const calendarModule = {
     },
 
     // Handle add event form submission
-    handleAddEvent(e) {
+    async handleAddEvent(e) {
         if (e.preventDefault) e.preventDefault();
 
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
@@ -115,40 +115,53 @@ const calendarModule = {
         const form = document.getElementById('addEventForm');
         const editingEventId = form.dataset.editingEventId;
 
-        const eventData = {
-            title: eventTitle,
-            description: eventDescription,
-            startDate: this.getLocalDateTimeString(startDateTime),
-            endDate: this.getLocalDateTimeString(endDateTime),
-            privacy: eventPrivacy,
-            createdBy: currentUser.uid,
-            createdByName: currentUser.displayName || currentUser.email,
-            householdId: currentHousehold.id
-        };
+        try {
+            // Encrypt sensitive event data
+            const encryptedData = await window.RoommatePortal.encryption.encryptSensitiveData({
+                title: eventTitle,
+                description: eventDescription
+            }, ['title', 'description']);
 
-        if (editingEventId) {
-            // Editing existing event
-            eventData.id = editingEventId;
-            // Keep original creation time
-            const originalEvent = this.events.find(e => e.id === editingEventId);
-            if (originalEvent) {
-                eventData.createdAt = originalEvent.createdAt;
+            const eventData = {
+                title: encryptedData.title,
+                title_encrypted: encryptedData.title_encrypted,
+                description: encryptedData.description,
+                description_encrypted: encryptedData.description_encrypted,
+                startDate: this.getLocalDateTimeString(startDateTime),
+                endDate: this.getLocalDateTimeString(endDateTime),
+                privacy: eventPrivacy,
+                createdBy: currentUser.uid,
+                createdByName: currentUser.displayName || currentUser.email,
+                householdId: currentHousehold.id
+            };
+
+            if (editingEventId) {
+                // Editing existing event
+                eventData.id = editingEventId;
+                // Keep original creation time
+                const originalEvent = this.events.find(e => e.id === editingEventId);
+                if (originalEvent) {
+                    eventData.createdAt = originalEvent.createdAt;
+                }
+                await this.updateEvent(eventData);
+            } else {
+                // Creating new event
+                eventData.id = Date.now().toString();
+                eventData.createdAt = this.getLocalDateTimeString(new Date());
+                await this.saveEvent(eventData);
             }
-            this.updateEvent(eventData);
-        } else {
-            // Creating new event
-            eventData.id = Date.now().toString();
-            eventData.createdAt = this.getLocalDateTimeString(new Date());
-            this.saveEvent(eventData);
-        }
 
-        this.clearForm();
-        window.RoommatePortal.utils.showNotification(editingEventId ? '✅ Event updated successfully!' : '✅ Event added successfully!');
+            this.clearForm();
+            window.RoommatePortal.utils.showNotification(editingEventId ? '✅ Event updated successfully!' : '✅ Event added successfully!');
 
-        // Close modal if it exists
-        const modal = document.querySelector('.input-modal');
-        if (modal) {
-            modal.style.display = 'none';
+            // Close modal if it exists
+            const modal = document.querySelector('.input-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error encrypting event data:', error);
+            window.RoommatePortal.utils.showNotification('❌ Failed to save event. Please try again.');
         }
     },
 
@@ -206,12 +219,23 @@ const calendarModule = {
             .collection('events');
 
         // Set up real-time listener
-        const eventsListener = eventsCollection.orderBy('startDate', 'asc').onSnapshot((snapshot) => {
+        const eventsListener = eventsCollection.orderBy('startDate', 'asc').onSnapshot(async (snapshot) => {
             this.events = [];
+            const eventsList = [];
             snapshot.forEach((doc) => {
                 const eventData = { ...doc.data(), id: doc.id };
-                this.events.push(eventData);
+                eventsList.push(eventData);
             });
+
+            // Decrypt event data
+            try {
+                this.events = await window.RoommatePortal.encryption.decryptDataArray(eventsList, ['title', 'description']);
+            } catch (error) {
+                console.error('Error decrypting events:', error);
+                this.events = eventsList; // Use original data if decryption fails
+                window.RoommatePortal.utils.showNotification('⚠️ Some events could not be decrypted.');
+            }
+
             this.renderCalendar();
             this.updateCalendarStats();
         }, (error) => {

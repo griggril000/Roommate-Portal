@@ -42,6 +42,33 @@ A modern, household-based roommate management application built with Firebase an
 2. **Create or Join**: Either create a new household or join existing one with a code
 3. **Start Collaborating**: Add chores, post messages, and manage your shared living space
 
+## 🔐 Data Encryption
+
+### End-to-End Encryption
+- **AES-256-GCM Encryption**: All sensitive user data is encrypted using industry-standard AES-256-GCM encryption
+- **Household-Level Keys**: Each household has its own unique encryption key stored securely in Firebase
+- **Client-Side Encryption**: Data is encrypted in the browser before being sent to the server
+- **Automatic Key Generation**: Encryption keys are automatically generated when households are created
+
+### Encrypted Data Types
+- **Messages**: All message content is encrypted
+- **Announcements**: Titles and content are encrypted
+- **Calendar Events**: Event titles and descriptions are encrypted
+- **Chores**: Chore descriptions are encrypted
+- **Rewards**: Reward names and descriptions are encrypted
+
+### Key Management
+- **Persistent Keys**: Encryption keys are stored in the household document in Firebase
+- **Cross-Device Sync**: Keys are automatically available across all devices for household members
+- **Migration Support**: Existing households are automatically migrated to use encryption
+- **Backup Protection**: Keys are safely stored and accessible only to household members
+
+### Security Features
+- **Browser-Based Encryption**: Uses the Web Crypto API for secure encryption operations
+- **No Server-Side Decryption**: Firebase only stores encrypted data, never plaintext
+- **Access Control**: Only household members can access the encryption key
+- **Automatic Migration**: Existing data is handled gracefully with backward compatibility
+
 ## 🛡️ Security & Permissions
 
 ### Household Access Control

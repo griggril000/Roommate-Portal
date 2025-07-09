@@ -83,7 +83,7 @@ const choresModule = {
     },
 
     // Handle add chore form submission
-    handleAddChore(e) {
+    async handleAddChore(e) {
         if (e.preventDefault) e.preventDefault();
 
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
@@ -109,33 +109,39 @@ const choresModule = {
         }
 
         if (choreText) {
-            const chore = {
-                text: choreText,
-                assignee: assignee || 'Unassigned',
-                completed: false,
-                dateAdded: new Date().toLocaleDateString(),
-                priority: 'medium',
-                householdId: currentHousehold.id,
-                createdBy: currentUser.uid,
-                createdByName: currentUser.displayName,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                points: chorePoints // Add points to chore
-            };
+            try {
+                // Encrypt the chore text
+                const encryptedData = await window.RoommatePortal.encryption.encryptSensitiveData({
+                    text: choreText
+                }, ['text']);
 
-            // Add to Firestore
-            const { db } = window.RoommatePortal.config;
-            db.collection('chores').add(chore)
-                .then(() => {
-                    // Clear form
-                    elements.choreInput.value = '';
-                    elements.choreAssignee.value = '';
-                    if (elements.chorePoints) elements.chorePoints.value = '';
-                    window.RoommatePortal.utils.showNotification('✅ Chore added successfully!');
-                })
-                .catch(error => {
-                    console.error('Error adding chore:', error);
-                    window.RoommatePortal.utils.showNotification('❌ Failed to add chore. Please try again.');
-                });
+                const chore = {
+                    text: encryptedData.text,
+                    text_encrypted: encryptedData.text_encrypted,
+                    assignee: assignee || 'Unassigned',
+                    completed: false,
+                    dateAdded: new Date().toLocaleDateString(),
+                    priority: 'medium',
+                    householdId: currentHousehold.id,
+                    createdBy: currentUser.uid,
+                    createdByName: currentUser.displayName,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    points: chorePoints // Add points to chore
+                };
+
+                // Add to Firestore
+                const { db } = window.RoommatePortal.config;
+                await db.collection('chores').add(chore);
+
+                // Clear form
+                elements.choreInput.value = '';
+                elements.choreAssignee.value = '';
+                if (elements.chorePoints) elements.chorePoints.value = '';
+                window.RoommatePortal.utils.showNotification('✅ Chore added successfully!');
+            } catch (error) {
+                console.error('Error adding chore:', error);
+                window.RoommatePortal.utils.showNotification('❌ Failed to add chore. Please try again.');
+            }
         } else {
             window.RoommatePortal.utils.showNotification('❌ Please enter a chore description.');
         }
@@ -157,8 +163,17 @@ const choresModule = {
 
         const listener = db.collection('chores')
             .where('householdId', '==', currentHousehold.id)
-            .onSnapshot((snapshot) => {
-                const choresList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            .onSnapshot(async (snapshot) => {
+                let choresList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Decrypt chore text
+                try {
+                    choresList = await window.RoommatePortal.encryption.decryptDataArray(choresList, ['text']);
+                } catch (error) {
+                    console.error('Error decrypting chores:', error);
+                    window.RoommatePortal.utils.showNotification('⚠️ Some chores could not be decrypted.');
+                }
+
                 window.RoommatePortal.state.setChores(choresList);
                 this.loadChores();
                 window.RoommatePortal.statistics.updateStatistics();

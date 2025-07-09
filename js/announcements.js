@@ -20,7 +20,7 @@ const announcementsModule = {
     },
 
     // Handle post announcement form submission
-    handlePostAnnouncement(e) {
+    async handlePostAnnouncement(e) {
         e.preventDefault();
 
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
@@ -41,30 +41,38 @@ const announcementsModule = {
             return;
         }
 
-        const announcement = {
-            title: titleInput?.value.trim() || null,
-            body: bodyInput.value.trim(),
-            author: currentUser.displayName || currentUser.email,
-            authorId: currentUser.uid,
-            createdAt: new Date().toISOString(),
-            expiresAt: expirationInput?.value ? new Date(expirationInput.value).toISOString() : null,
-            householdId: currentHousehold.id
-        };
+        try {
+            // Encrypt the announcement content
+            const encryptedData = await window.RoommatePortal.encryption.encryptSensitiveData({
+                title: titleInput?.value.trim() || null,
+                body: bodyInput.value.trim()
+            }, ['title', 'body']);
 
-        // Add to Firestore
-        window.RoommatePortal.config.db.collection('announcements').add(announcement)
-            .then(() => {
-                window.RoommatePortal.utils.showNotification('📢 Announcement posted successfully!');
+            const announcement = {
+                title: encryptedData.title,
+                title_encrypted: encryptedData.title_encrypted,
+                body: encryptedData.body,
+                body_encrypted: encryptedData.body_encrypted,
+                author: currentUser.displayName || currentUser.email,
+                authorId: currentUser.uid,
+                createdAt: new Date().toISOString(),
+                expiresAt: expirationInput?.value ? new Date(expirationInput.value).toISOString() : null,
+                householdId: currentHousehold.id
+            };
 
-                // Clear form
-                if (titleInput) titleInput.value = '';
-                if (bodyInput) bodyInput.value = '';
-                if (expirationInput) expirationInput.value = '';
-            })
-            .catch(error => {
-                console.error('Error posting announcement:', error);
-                window.RoommatePortal.utils.showNotification('❌ Failed to post announcement. Please try again.');
-            });
+            // Add to Firestore
+            await window.RoommatePortal.config.db.collection('announcements').add(announcement);
+
+            window.RoommatePortal.utils.showNotification('📢 Announcement posted successfully!');
+
+            // Clear form
+            if (titleInput) titleInput.value = '';
+            if (bodyInput) bodyInput.value = '';
+            if (expirationInput) expirationInput.value = '';
+        } catch (error) {
+            console.error('Error posting announcement:', error);
+            window.RoommatePortal.utils.showNotification('❌ Failed to post announcement. Please try again.');
+        }
     },
 
     // Load announcements from Firestore
@@ -85,8 +93,8 @@ const announcementsModule = {
             .collection('announcements')
             .where('householdId', '==', currentHousehold.id)
             .orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
-                const announcements = [];
+            .onSnapshot(async snapshot => {
+                let announcements = [];
                 snapshot.forEach(doc => {
                     const announcement = { id: doc.id, ...doc.data() };
 
@@ -98,6 +106,14 @@ const announcementsModule = {
                         announcements.push(announcement);
                     }
                 });
+
+                // Decrypt announcement content
+                try {
+                    announcements = await window.RoommatePortal.encryption.decryptDataArray(announcements, ['title', 'body']);
+                } catch (error) {
+                    console.error('Error decrypting announcements:', error);
+                    window.RoommatePortal.utils.showNotification('⚠️ Some announcements could not be decrypted.');
+                }
 
                 this.displayAnnouncements(announcements);
                 window.RoommatePortal.state.setAnnouncements(announcements);

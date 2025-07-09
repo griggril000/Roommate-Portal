@@ -324,10 +324,18 @@ const rewardsModule = {
         const { db } = window.RoommatePortal.config;
 
         try {
-            const reward = {
+            // Encrypt sensitive reward data
+            const encryptedData = await window.RoommatePortal.encryption.encryptSensitiveData({
                 name: name.trim(),
+                description: description.trim()
+            }, ['name', 'description']);
+
+            const reward = {
+                name: encryptedData.name,
+                name_encrypted: encryptedData.name_encrypted,
+                description: encryptedData.description,
+                description_encrypted: encryptedData.description_encrypted,
                 points: parseInt(points),
-                description: description.trim(),
                 createdBy: currentUser.uid,
                 createdByName: currentUser.displayName,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -336,10 +344,10 @@ const rewardsModule = {
             await db.collection('households').doc(currentHousehold.id)
                 .collection('rewards').add(reward);
 
-            // Log the transaction
-            await this.logTransaction('system', `Added reward: ${name} (${points} points)`, 0, currentUser.displayName);
+            // Log the transaction (using decrypted name for the log)
+            await this.logTransaction('system', `Added reward: ${name.trim()} (${points} points)`, 0, currentUser.displayName);
 
-            window.RoommatePortal.utils.showNotification(`✅ Reward "${name}" added successfully!`);
+            window.RoommatePortal.utils.showNotification(`✅ Reward "${name.trim()}" added successfully!`);
 
             this.loadRewardsFromFirestore();
         } catch (error) {
@@ -409,8 +417,17 @@ const rewardsModule = {
         const listener = db.collection('households').doc(currentHousehold.id)
             .collection('rewards')
             .orderBy('points', 'asc')
-            .onSnapshot((snapshot) => {
-                const rewardsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            .onSnapshot(async (snapshot) => {
+                let rewardsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Decrypt reward data
+                try {
+                    rewardsList = await window.RoommatePortal.encryption.decryptDataArray(rewardsList, ['name', 'description']);
+                } catch (error) {
+                    console.error('Error decrypting rewards:', error);
+                    window.RoommatePortal.utils.showNotification('⚠️ Some rewards could not be decrypted.');
+                }
+
                 window.RoommatePortal.state.setRewards(rewardsList);
                 this.renderRewards();
             }, (error) => {

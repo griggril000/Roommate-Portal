@@ -257,7 +257,9 @@ const household = {
                         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
                         role: 'admin'
                     }
-                }
+                },
+                // Generate encryption key for this household
+                encryptionKey: window.RoommatePortal.encryption.generateEncryptionKey()
             };
 
             const householdRef = await db.collection('households').add(householdData);
@@ -339,7 +341,11 @@ const household = {
                     photoURL: currentUser.photoURL || null,
                     joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     role: 'member'
-                }
+                },
+                // Add encryption key if it doesn't exist
+                ...(householdData.encryptionKey ? {} : {
+                    encryptionKey: window.RoommatePortal.encryption.generateEncryptionKey()
+                })
             });
 
             // Update user document
