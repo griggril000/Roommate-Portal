@@ -84,7 +84,7 @@ const dataCleanup = {
             const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
 
             if (isLastMember) {
-                // If this is the last member, delete all chores in the household
+                // If this is the last member, delete all household data
                 const deleteBatch = db.batch();
 
                 const allChoresQuery = await db.collection('chores')
@@ -112,6 +112,18 @@ const dataCleanup = {
                 allAnnouncementsQuery.docs.forEach(doc => {
                     deleteBatch.delete(doc.ref);
                 });
+
+                // Delete all events in the household (both private and public)
+                try {
+                    if (window.RoommatePortal.calendar && window.RoommatePortal.calendar.deleteAllHouseholdEvents) {
+                        await window.RoommatePortal.calendar.deleteAllHouseholdEvents(householdId);
+                    } else {
+                        console.warn('Calendar module not available, skipping event deletion');
+                    }
+                } catch (eventError) {
+                    console.error('Error deleting household events:', eventError);
+                    // Continue with other deletions even if event deletion fails
+                }
 
                 // Commit all deletions for last member
                 await deleteBatch.commit();
@@ -189,6 +201,18 @@ const dataCleanup = {
                     deleteBatch.delete(doc.ref);
                 });
 
+                // Delete all private events created by this user
+                try {
+                    if (window.RoommatePortal.calendar && window.RoommatePortal.calendar.deleteUserPrivateEvents) {
+                        await window.RoommatePortal.calendar.deleteUserPrivateEvents(userId, householdId);
+                    } else {
+                        console.warn('Calendar module not available, skipping private event deletion');
+                    }
+                } catch (eventError) {
+                    console.error('Error deleting user private events:', eventError);
+                    // Continue with other deletions even if event deletion fails
+                }
+
                 // Commit all deletions
                 await deleteBatch.commit();
             }
@@ -239,6 +263,37 @@ const dataCleanup = {
                 .get();
 
             announcementsQuery.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            // Delete all events in the household (both private and public)
+            try {
+                if (window.RoommatePortal.calendar && window.RoommatePortal.calendar.deleteAllHouseholdEvents) {
+                    await window.RoommatePortal.calendar.deleteAllHouseholdEvents(householdId);
+                } else {
+                    console.warn('Calendar module not available, skipping event deletion');
+                }
+            } catch (eventError) {
+                console.error('Error deleting household events:', eventError);
+                // Continue with other deletions even if event deletion fails
+            }
+
+            // Delete rewards and reward transactions if they exist
+            const rewardsQuery = await db.collection('households')
+                .doc(householdId)
+                .collection('rewards')
+                .get();
+
+            rewardsQuery.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            const transactionsQuery = await db.collection('households')
+                .doc(householdId)
+                .collection('rewardTransactions')
+                .get();
+
+            transactionsQuery.docs.forEach(doc => {
                 batch.delete(doc.ref);
             });
 

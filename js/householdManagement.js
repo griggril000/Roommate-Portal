@@ -103,11 +103,11 @@ const householdManagement = {
         const isAdmin = currentHousehold.memberDetails[currentUser.uid]?.role === 'admin';
         const memberCount = Object.keys(currentHousehold.memberDetails || {}).length;
 
-        let confirmMessage = 'Are you sure you want to leave this household? This will unassign chores assigned to you and delete your messages, but preserve all chores for household history.';
+        let confirmMessage = 'Are you sure you want to leave this household? This will unassign chores assigned to you, delete your messages and announcements, delete your private calendar events, but preserve all public chores and events for household history.';
         if (isAdmin && memberCount > 1) {
-            confirmMessage = 'You are the admin of this household. Leaving will transfer admin rights to another member, unassign your chores, and delete your messages. All chores will be preserved. Are you sure?';
+            confirmMessage = 'You are the admin of this household. Leaving will transfer admin rights to another member, unassign your chores, delete your messages and announcements, delete your private calendar events, but preserve all public chores and events. Are you sure?';
         } else if (isAdmin && memberCount === 1) {
-            confirmMessage = 'You are the only member of this household. Leaving will delete the household and ALL data permanently (including all chores and messages). Are you sure?';
+            confirmMessage = 'You are the only member of this household. Leaving will delete the household and ALL data permanently (including all chores, messages, announcements, and calendar events). Are you sure?';
         }
 
         if (confirm(confirmMessage)) {
@@ -137,7 +137,7 @@ const householdManagement = {
                             });
                         }
                     }
-                    window.RoommatePortal.utils.showNotification('👋 You have left the household. Your chores have been unassigned and marked as created by "Former Member", and your messages have been deleted.');
+                    window.RoommatePortal.utils.showNotification('👋 You have left the household. Your chores have been unassigned and marked as created by "Former Member", your messages and announcements have been deleted, and your private calendar events have been deleted.');
                 }
 
                 // Remove household reference from user
@@ -179,7 +179,8 @@ const householdManagement = {
             '• Remove you from your current household\n' +
             '• Unassign chores assigned to you (chores will be preserved)\n' +
             '• Mark chores you created as "Former Member"\n' +
-            '• Delete your messages\n' +
+            '• Delete your messages and announcements\n' +
+            '• Delete all your private calendar events\n' +
             '• Permanently delete your account\n\n' +
             'This action cannot be undone!';
 
