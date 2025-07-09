@@ -24,6 +24,11 @@ const calendarModule = {
     refresh() {
         this.loadEvents();
         this.renderCalendar();
+
+        // Trigger cleanup when household changes
+        setTimeout(() => {
+            this.cleanupOldEvents();
+        }, 2000);
     },
 
     // Setup calendar form event listener
@@ -1001,18 +1006,8 @@ const calendarModule = {
                 return false;
             }
 
-            if (eventInRange) {
-                console.log('Calendar: Including event:', event.title,
-                    'Start:', eventStart.toLocaleString(),
-                    'End:', eventEnd.toLocaleString(),
-                    'Future:', startsInFuture,
-                    'Ongoing:', isCurrentlyOngoing);
-            }
-
             return eventInRange;
         });
-
-        console.log('Calendar: Found', upcomingEvents.length, 'upcoming/current events');
 
         // Update dashboard tile
         const upcomingEventsCount = document.getElementById('upcomingEventsCount');
@@ -1028,43 +1023,89 @@ const calendarModule = {
             this.cleanupOldEvents();
         }, 24 * 60 * 60 * 1000);
 
-        // Initial cleanup on login
-        this.cleanupOldEvents();
+        // Initial cleanup after a delay to ensure events are loaded
+        setTimeout(() => {
+            this.cleanupOldEvents();
+        }, 5000); // Wait 5 seconds for events to load
     },
 
-    // Clean up events older than 30 days past their end date
+    // Clean up events older than 90 days past their end date
     async cleanupOldEvents() {
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
-        if (!currentHousehold) return;
+        if (!currentHousehold) {
+            return;
+        }
 
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const eventsToDelete = this.events.filter(event => {
-            const eventEnd = this.parseLocalDateTimeString(event.endDate);
-            return eventEnd < thirtyDaysAgo;
-        });
-
-        if (eventsToDelete.length === 0) return;
-
-        console.log(`Cleaning up ${eventsToDelete.length} old events`);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
         try {
-            const batch = firebase.firestore().batch();
+            // Query Firestore directly instead of relying on local events array
             const eventsCollection = firebase.firestore()
                 .collection('households')
                 .doc(currentHousehold.id)
                 .collection('events');
 
-            eventsToDelete.forEach(event => {
-                batch.delete(eventsCollection.doc(event.id));
+            const snapshot = await eventsCollection.get();
+            const eventsToDelete = [];
+
+            snapshot.forEach(doc => {
+                const event = doc.data();
+
+                // Skip events without endDate
+                if (!event.endDate) {
+                    console.log('Calendar: Skipping event without endDate:', event.title || 'Unknown');
+                    return;
+                }
+
+                const eventEnd = this.parseLocalDateTimeString(event.endDate);
+
+                // Skip events with invalid dates
+                if (isNaN(eventEnd.getTime())) {
+                    console.log('Calendar: Skipping event with invalid endDate:', event.title || 'Unknown', event.endDate);
+                    return;
+                }
+
+                console.log('Calendar: Checking event:', event.title,
+                    'End date:', eventEnd.toLocaleDateString(),
+                    'Older than cutoff:', eventEnd < ninetyDaysAgo);
+
+                if (eventEnd < ninetyDaysAgo) {
+                    eventsToDelete.push({
+                        id: doc.id,
+                        title: event.title || 'Unknown',
+                        endDate: eventEnd
+                    });
+                }
             });
 
-            await batch.commit();
-            console.log('Old events cleaned up successfully');
+            if (eventsToDelete.length === 0) {
+                console.log('Calendar: No old events to clean up');
+                return;
+            }
+
+            console.log(`Calendar: Found ${eventsToDelete.length} old events to delete:`,
+                eventsToDelete.map(e => `${e.title} (ended ${e.endDate.toLocaleDateString()})`));
+
+            // Delete events in batches (Firestore batch limit is 500)
+            const batchSize = 500;
+            for (let i = 0; i < eventsToDelete.length; i += batchSize) {
+                const batch = firebase.firestore().batch();
+                const batchEvents = eventsToDelete.slice(i, i + batchSize);
+
+                batchEvents.forEach(event => {
+                    batch.delete(eventsCollection.doc(event.id));
+                });
+
+                await batch.commit();
+                console.log(`Calendar: Deleted batch of ${batchEvents.length} old events`);
+            }
+
+            console.log('Calendar: Old events cleanup completed successfully');
 
         } catch (error) {
-            console.error('Error cleaning up old events:', error);
+            console.error('Calendar: Error cleaning up old events:', error);
+            // Don't show notification to user as this is background cleanup
         }
     },
 
@@ -1108,17 +1149,23 @@ const calendarModule = {
 
     // Helper function to parse local datetime string back to Date object
     parseLocalDateTimeString(dateTimeStr) {
-        // Handle both old ISO format and new local format
-        if (dateTimeStr.includes('Z') || dateTimeStr.includes('+')) {
-            // Old ISO format - convert from UTC
-            return new Date(dateTimeStr);
-        } else {
-            // New local format - parse as local time
-            const [datePart, timePart] = dateTimeStr.split('T');
-            const [year, month, day] = datePart.split('-').map(Number);
-            const [hours, minutes, seconds] = timePart.split(':').map(Number);
+        try {
+            // Handle both old ISO format and new local format
+            if (dateTimeStr.includes('Z') || dateTimeStr.includes('+')) {
+                // Old ISO format - convert from UTC
+                return new Date(dateTimeStr);
+            } else {
+                // New local format - parse as local time
+                const [datePart, timePart] = dateTimeStr.split('T');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = timePart.split(':').map(Number);
 
-            return new Date(year, month - 1, day, hours, minutes, seconds || 0);
+                return new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            }
+        } catch (error) {
+            console.error('Calendar: Error parsing datetime string:', dateTimeStr, error);
+            // Return a very old date so the event gets cleaned up
+            return new Date('1970-01-01');
         }
     },
 };
