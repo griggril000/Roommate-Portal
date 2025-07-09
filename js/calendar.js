@@ -862,6 +862,7 @@ const calendarModule = {
         if (!modal) {
             // Try original form if no modal
             this.populateFormElements(document);
+            this.updateFormButtonText(document, true);
             return;
         }
 
@@ -878,6 +879,7 @@ const calendarModule = {
 
         // Populate form elements within the modal
         this.populateFormElements(modal);
+        this.updateFormButtonText(modal, true);
     },
 
     // Helper method to populate form elements
@@ -1004,6 +1006,9 @@ const calendarModule = {
 
         // Clear editing event data
         this.editingEventData = null;
+
+        // Reset button text to "Add Event"
+        this.updateFormButtonText(document, false);
     },
 
     // Update calendar statistics
@@ -1255,6 +1260,22 @@ const calendarModule = {
         } catch (error) {
             console.error('Calendar: Error deleting household events:', error);
             throw new Error(`Failed to delete household events: ${error.message || error.code || 'Unknown error'}`);
+        }
+    },
+
+    // Update form button text based on editing state
+    updateFormButtonText(container, isEditing) {
+        // Find the submit button in the form
+        const submitButton = container.querySelector('#addEventForm button[type="submit"]') ||
+            container.querySelector('form button[type="submit"]') ||
+            container.querySelector('button[type="submit"]');
+
+        if (submitButton) {
+            if (isEditing) {
+                submitButton.innerHTML = '<i class="fas fa-edit mr-2"></i>Update Event';
+            } else {
+                submitButton.innerHTML = '<i class="fas fa-calendar-plus mr-2"></i>Add Event';
+            }
         }
     },
 };
