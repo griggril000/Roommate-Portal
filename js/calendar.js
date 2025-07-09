@@ -260,7 +260,18 @@ const calendarModule = {
         for (let week = 0; week < weeks; week++) {
             const weekRow = document.createElement('div');
             weekRow.className = 'calendar-week-row grid grid-cols-7 gap-1 mb-1 relative';
-            weekRow.style.minHeight = '140px';
+
+            // Responsive height based on screen size
+            const isMobile = window.innerWidth <= 768;
+            const isSmallMobile = window.innerWidth <= 480;
+
+            if (isSmallMobile) {
+                weekRow.style.minHeight = '80px';
+            } else if (isMobile) {
+                weekRow.style.minHeight = '100px';
+            } else {
+                weekRow.style.minHeight = '140px';
+            }
 
             // Add 7 days to this week row
             for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
@@ -494,12 +505,29 @@ const calendarModule = {
         const weekRow = firstDayWithEvents.element.parentElement;
         if (!weekRow) return;
 
-        // Create view all indicator
+        // Create view all indicator with mobile responsiveness
         const viewAllIndicator = document.createElement('div');
         viewAllIndicator.className = 'calendar-spanning-event calendar-view-all-indicator';
         viewAllIndicator.style.left = '2%';
         viewAllIndicator.style.width = '96%';
-        viewAllIndicator.style.top = `${28 + (lastRowIndex * 28)}px`;
+
+        // Responsive positioning
+        const isMobile = window.innerWidth <= 768;
+        const isSmallMobile = window.innerWidth <= 480;
+
+        let top, spacing;
+        if (isSmallMobile) {
+            top = 26; // Increased from 22
+            spacing = 18;
+        } else if (isMobile) {
+            top = 28; // Increased from 24
+            spacing = 20;
+        } else {
+            top = 32; // Increased from 28
+            spacing = 28;
+        }
+
+        viewAllIndicator.style.top = `${top + (lastRowIndex * spacing)}px`;
         viewAllIndicator.style.textAlign = 'center';
         viewAllIndicator.style.background = '#f9fafb';
         viewAllIndicator.style.color = '#6b7280';
@@ -567,14 +595,31 @@ const calendarModule = {
 
         // Create the spanning event element
         const spanningEvent = document.createElement('div');
-        spanningEvent.className = `calendar-spanning-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'}`;        // Calculate position and size
+        spanningEvent.className = `calendar-spanning-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'}`;        // Calculate position and size with mobile responsiveness
         const left = (startCol / 7) * 100;
         const width = ((endCol - startCol + 1) / 7) * 100;
-        const top = 28 + (rowIndex * 28); // Better spacing and positioning
+
+        // Responsive positioning based on screen size
+        const isMobile = window.innerWidth <= 768;
+        const isSmallMobile = window.innerWidth <= 480;
+
+        let top, spacing;
+        if (isSmallMobile) {
+            top = 26; // Increased from 22
+            spacing = 18;
+        } else if (isMobile) {
+            top = 28; // Increased from 24
+            spacing = 20;
+        } else {
+            top = 32; // Increased from 28
+            spacing = 28;
+        }
+
+        const finalTop = top + (rowIndex * spacing);
 
         spanningEvent.style.left = `${left}%`;
         spanningEvent.style.width = `${width}%`;
-        spanningEvent.style.top = `${top}px`;
+        spanningEvent.style.top = `${finalTop}px`;
         spanningEvent.style.zIndex = '50'; // Ensure high z-index
 
         console.log('Calendar: Event positioned at', left + '%', 'width', width + '%', 'top', top + 'px');

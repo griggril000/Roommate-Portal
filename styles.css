@@ -575,16 +575,84 @@ header {
 /* Responsive calendar */
 @media (max-width: 768px) {
     .calendar-day {
-        min-height: 80px;
+        min-height: 100px;
+        /* Reduced height on mobile */
         padding: 4px;
+        font-size: 12px;
+    }
+
+    .calendar-week-row {
+        min-height: 100px;
+        /* Reduced height on mobile */
     }
 
     .calendar-day-number {
         font-size: 12px;
+        margin-bottom: 2px;
+    }
+
+    .calendar-day-events {
+        margin-top: 75px;
+        /* Reduced space for spanning events on mobile */
+    }
+
+    .calendar-spanning-event {
+        height: 18px;
+        /* Smaller height on mobile */
+        line-height: 14px;
+        font-size: 10px;
+        padding: 2px 4px;
     }
 
     .calendar-event {
-        font-size: 10px;
+        font-size: 9px;
+        padding: 1px 3px;
+    }
+
+    .calendar-view-all-btn {
+        font-size: 8px;
+        padding: 1px 3px;
+    }
+
+    .calendar-day-header {
+        padding: 4px;
+        font-size: 12px;
+    }
+
+    .calendar-container {
+        padding: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-day {
+        min-height: 80px;
+        /* Even smaller on very small screens */
+        padding: 2px;
+    }
+
+    .calendar-week-row {
+        min-height: 80px;
+    }
+
+    .calendar-day-events {
+        margin-top: 60px;
+        /* Further reduced space */
+    }
+
+    .calendar-spanning-event {
+        height: 16px;
+        line-height: 12px;
+        font-size: 9px;
+        padding: 1px 3px;
+    }
+
+    .calendar-day-number {
+        font-size: 11px;
+    }
+
+    .calendar-event {
+        font-size: 8px;
         padding: 1px 2px;
     }
 }
