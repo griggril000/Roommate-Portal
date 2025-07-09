@@ -303,7 +303,7 @@ const calendarModule = {
 
                     // Get single-day events for this day (multi-day events will be handled separately)
                     const singleDayEvents = this.getSingleDayEventsForDay(currentDate);
-                    const maxSingleDayEvents = 3;
+                    const maxSingleDayEvents = 2;
                     const displayedSingleDayEvents = singleDayEvents.slice(0, maxSingleDayEvents);
                     const hasMoreSingleDayEvents = singleDayEvents.length > maxSingleDayEvents;
 
