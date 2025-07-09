@@ -20,6 +20,7 @@ let messagesListener = null;
 let announcementsListener = null;
 let rewardsListener = null;
 let rewardTransactionsListener = null;
+let eventsListener = null;
 
 // DOM elements - Core
 const choreInput = document.getElementById('choreInput');
@@ -43,6 +44,7 @@ const activeChoresCount = document.getElementById('activeChoresCount');
 const completedTodayCount = document.getElementById('completedTodayCount');
 const newMessagesCount = document.getElementById('newMessagesCount');
 const activeAnnouncementsCount = document.getElementById('activeAnnouncementsCount');
+const upcomingEventsCount = document.getElementById('upcomingEventsCount');
 
 // Authentication buttons
 const signInButton = document.getElementById('signInButton');
@@ -111,6 +113,9 @@ window.RoommatePortal.state = {
     getRewardTransactionsListener: () => rewardTransactionsListener,
     setRewardTransactionsListener: (listener) => { rewardTransactionsListener = listener; },
 
+    getEventsListener: () => eventsListener,
+    setEventsListener: (listener) => { eventsListener = listener; },
+
     // DOM elements
     elements: {
         choreInput,
@@ -132,6 +137,7 @@ window.RoommatePortal.state = {
         completedTodayCount,
         newMessagesCount,
         activeAnnouncementsCount,
+        upcomingEventsCount,
         signInButton,
         signOutButton,
         householdManagementBtn,

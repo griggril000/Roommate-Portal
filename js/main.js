@@ -32,6 +32,7 @@ const appModule = {
             window.RoommatePortal.chores.init();
             window.RoommatePortal.messages.init();
             window.RoommatePortal.announcements.init();
+            window.RoommatePortal.calendar.init();
 
             // Initialize rewards system
             window.RoommatePortal.rewards.init();
@@ -67,6 +68,7 @@ const appModule = {
         const rewardPointsTile = document.getElementById('rewardPointsTile');
         const newMessagesTile = document.getElementById('newMessagesTile');
         const activeAnnouncementsTile = document.getElementById('activeAnnouncementsTile');
+        const upcomingEventsTile = document.getElementById('upcomingEventsTile');
 
         // Chores tile - navigate to chores
         if (choresTile) {
@@ -107,6 +109,17 @@ const appModule = {
                 }));
             });
         }
+
+        // Upcoming events tile - navigate to calendar
+        if (upcomingEventsTile) {
+            upcomingEventsTile.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('calendar');
+                setTimeout(() => this.createFAB('calendar'), 100);
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'calendar' }
+                }));
+            });
+        }
     },
 
     // Setup "Back to Dashboard" buttons
@@ -114,6 +127,7 @@ const appModule = {
         const backToDashboardFromChores = document.getElementById('backToDashboardFromChores');
         const backToDashboardFromMessages = document.getElementById('backToDashboardFromMessages');
         const backToDashboardFromAnnouncements = document.getElementById('backToDashboardFromAnnouncements');
+        const backToDashboardFromCalendar = document.getElementById('backToDashboardFromCalendar');
 
         // Back to dashboard from chores
         if (backToDashboardFromChores) {
@@ -148,6 +162,21 @@ const appModule = {
         // Back to dashboard from announcements
         if (backToDashboardFromAnnouncements) {
             backToDashboardFromAnnouncements.addEventListener('click', () => {
+                window.RoommatePortal.utils.switchTab('dashboard');
+                // Remove FAB when returning to dashboard
+                if (this.currentFAB) {
+                    this.currentFAB.remove();
+                    this.currentFAB = null;
+                }
+                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
+                    detail: { tab: 'dashboard' }
+                }));
+            });
+        }
+
+        // Back to dashboard from calendar
+        if (backToDashboardFromCalendar) {
+            backToDashboardFromCalendar.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('dashboard');
                 // Remove FAB when returning to dashboard
                 if (this.currentFAB) {
@@ -394,8 +423,15 @@ const appModule = {
         const titles = {
             'chores': 'Add New Chore',
             'messages': 'Post New Message',
-            'announcements': 'Create Announcement'
+            'announcements': 'Create Announcement',
+            'calendar': 'Add New Event'
         };
+
+        // Check if we're in edit mode for calendar
+        if (section === 'calendar' && window.RoommatePortal.calendar?.editingEventData) {
+            return 'Edit Event';
+        }
+
         return titles[section] || 'Add New Item';
     },
 
@@ -404,7 +440,8 @@ const appModule = {
         const formIds = {
             'chores': 'addChoreForm',
             'messages': 'postMessageForm',
-            'announcements': 'postAnnouncementForm'
+            'announcements': 'postAnnouncementForm',
+            'calendar': 'addEventForm'
         };
 
         const formId = formIds[section];
@@ -446,7 +483,7 @@ const appModule = {
     clearModalForm(formClone) {
         const inputs = formClone.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
-            if (input.type === 'text' || input.type === 'email' || input.type === 'datetime-local' || input.tagName === 'TEXTAREA') {
+            if (input.type === 'text' || input.type === 'email' || input.type === 'datetime-local' || input.type === 'date' || input.type === 'time' || input.tagName === 'TEXTAREA') {
                 input.value = '';
             } else if (input.type === 'select-one') {
                 input.selectedIndex = 0;
@@ -460,11 +497,11 @@ const appModule = {
         if (!originalForm) return;
 
         // Get form inputs by type and position for more reliable matching
-        const modalInputs = modalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], textarea');
+        const modalInputs = modalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], input[type="date"], input[type="time"], textarea');
         const modalSelects = modalForm.querySelectorAll('select');
         const modalNumberInputs = modalForm.querySelectorAll('input[type="number"]');
 
-        const originalInputs = originalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], textarea');
+        const originalInputs = originalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], input[type="date"], input[type="time"], textarea');
         const originalSelects = originalForm.querySelectorAll('select');
         const originalNumberInputs = originalForm.querySelectorAll('input[type="number"]');
 
@@ -495,11 +532,15 @@ const appModule = {
             }
         });
 
-        console.log(`Form data copied for ${section}:`, {
-            textInputs: modalInputs.length,
-            selects: modalSelects.length,
-            datetimeInputs: modalForm.querySelectorAll('input[type="datetime-local"]').length
-        });
+        // Copy form dataset attributes (like editingEventId for calendar)
+        const modalFormElement = modalForm.querySelector('form') || modalForm;
+        const originalFormElement = originalForm.querySelector('form') || originalForm;
+        if (modalFormElement && originalFormElement) {
+            // Copy all data attributes
+            Object.keys(modalFormElement.dataset).forEach(key => {
+                originalFormElement.dataset[key] = modalFormElement.dataset[key];
+            });
+        }
     },
 
     // Remove IDs from cloned elements to avoid conflicts

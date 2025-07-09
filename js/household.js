@@ -60,6 +60,7 @@ const household = {
             window.RoommatePortal.chores.loadChoresFromFirestore();
             window.RoommatePortal.messages.loadMessagesFromFirestore();
             window.RoommatePortal.announcements.loadAnnouncements();
+            window.RoommatePortal.calendar.refresh();
 
             // Update rewards UI when household data changes
             if (window.RoommatePortal.rewards) {
