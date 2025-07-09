@@ -332,14 +332,20 @@ const rewardsModule = {
 
             const reward = {
                 name: encryptedData.name,
-                name_encrypted: encryptedData.name_encrypted,
                 description: encryptedData.description,
-                description_encrypted: encryptedData.description_encrypted,
                 points: parseInt(points),
                 createdBy: currentUser.uid,
                 createdByName: currentUser.displayName,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
+
+            // Only add encrypted flags if the fields were actually encrypted
+            if (encryptedData.name_encrypted) {
+                reward.name_encrypted = encryptedData.name_encrypted;
+            }
+            if (encryptedData.description_encrypted) {
+                reward.description_encrypted = encryptedData.description_encrypted;
+            }
 
             await db.collection('households').doc(currentHousehold.id)
                 .collection('rewards').add(reward);

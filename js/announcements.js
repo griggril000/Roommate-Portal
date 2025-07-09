@@ -44,21 +44,27 @@ const announcementsModule = {
         try {
             // Encrypt the announcement content
             const encryptedData = await window.RoommatePortal.encryption.encryptSensitiveData({
-                title: titleInput?.value.trim() || null,
+                title: titleInput?.value.trim() || '',
                 body: bodyInput.value.trim()
             }, ['title', 'body']);
 
             const announcement = {
                 title: encryptedData.title,
-                title_encrypted: encryptedData.title_encrypted,
                 body: encryptedData.body,
-                body_encrypted: encryptedData.body_encrypted,
                 author: currentUser.displayName || currentUser.email,
                 authorId: currentUser.uid,
                 createdAt: new Date().toISOString(),
                 expiresAt: expirationInput?.value ? new Date(expirationInput.value).toISOString() : null,
                 householdId: currentHousehold.id
             };
+
+            // Only add encrypted flags if the fields were actually encrypted
+            if (encryptedData.title_encrypted) {
+                announcement.title_encrypted = encryptedData.title_encrypted;
+            }
+            if (encryptedData.body_encrypted) {
+                announcement.body_encrypted = encryptedData.body_encrypted;
+            }
 
             // Add to Firestore
             await window.RoommatePortal.config.db.collection('announcements').add(announcement);

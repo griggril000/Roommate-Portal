@@ -68,13 +68,17 @@ const messagesModule = {
                 const message = {
                     author: author,
                     text: encryptedMessage.text,
-                    text_encrypted: encryptedMessage.text_encrypted,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     householdId: currentHousehold.id,
                     authorId: currentUser.uid,
                     // Track which users have read this message (author has read it by default)
                     readBy: [currentUser.uid]
                 };
+
+                // Only add encrypted flag if the field was actually encrypted
+                if (encryptedMessage.text_encrypted) {
+                    message.text_encrypted = encryptedMessage.text_encrypted;
+                }
 
                 // Add to Firestore
                 const { db } = window.RoommatePortal.config;

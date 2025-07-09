@@ -117,7 +117,6 @@ const choresModule = {
 
                 const chore = {
                     text: encryptedData.text,
-                    text_encrypted: encryptedData.text_encrypted,
                     assignee: assignee || 'Unassigned',
                     completed: false,
                     dateAdded: new Date().toLocaleDateString(),
@@ -128,6 +127,11 @@ const choresModule = {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     points: chorePoints // Add points to chore
                 };
+
+                // Only add encrypted flag if the field was actually encrypted
+                if (encryptedData.text_encrypted) {
+                    chore.text_encrypted = encryptedData.text_encrypted;
+                }
 
                 // Add to Firestore
                 const { db } = window.RoommatePortal.config;

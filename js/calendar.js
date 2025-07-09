@@ -124,9 +124,7 @@ const calendarModule = {
 
             const eventData = {
                 title: encryptedData.title,
-                title_encrypted: encryptedData.title_encrypted,
                 description: encryptedData.description,
-                description_encrypted: encryptedData.description_encrypted,
                 startDate: this.getLocalDateTimeString(startDateTime),
                 endDate: this.getLocalDateTimeString(endDateTime),
                 privacy: eventPrivacy,
@@ -134,6 +132,14 @@ const calendarModule = {
                 createdByName: currentUser.displayName || currentUser.email,
                 householdId: currentHousehold.id
             };
+
+            // Only add encrypted flags if the fields were actually encrypted
+            if (encryptedData.title_encrypted) {
+                eventData.title_encrypted = encryptedData.title_encrypted;
+            }
+            if (encryptedData.description_encrypted) {
+                eventData.description_encrypted = encryptedData.description_encrypted;
+            }
 
             if (editingEventId) {
                 // Editing existing event
