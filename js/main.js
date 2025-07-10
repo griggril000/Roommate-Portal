@@ -40,6 +40,11 @@ const appModule = {
             // Initialize notifications module
             window.RoommatePortal.notifications.init();
 
+            // Initialize voice commands
+            if (window.RoommatePortal.voiceCommands) {
+                window.RoommatePortal.voiceCommands.init();
+            }
+
             // Setup global click handlers for tabs
             this.setupTabHandlers();
 
@@ -55,11 +60,8 @@ const appModule = {
         // Setup clickable dashboard tiles (primary navigation)
         this.setupDashboardTiles();
 
-        // Setup "Back to Dashboard" buttons
-        this.setupBackToDashboardButtons();
-
-        // Setup floating action buttons
-        this.setupFloatingActionButtons();
+        // Setup section action buttons
+        this.setupSectionButtons();
     },
 
     // Setup clickable dashboard tiles
@@ -74,7 +76,6 @@ const appModule = {
         if (choresTile) {
             choresTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('chores');
-                setTimeout(() => this.createFAB('chores'), 100);
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'chores' }
                 }));
@@ -92,7 +93,6 @@ const appModule = {
         if (newMessagesTile) {
             newMessagesTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('messages');
-                setTimeout(() => this.createFAB('messages'), 100);
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'messages' }
                 }));
@@ -103,7 +103,6 @@ const appModule = {
         if (activeAnnouncementsTile) {
             activeAnnouncementsTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('announcements');
-                setTimeout(() => this.createFAB('announcements'), 100);
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'announcements' }
                 }));
@@ -114,7 +113,6 @@ const appModule = {
         if (upcomingEventsTile) {
             upcomingEventsTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('calendar');
-                setTimeout(() => this.createFAB('calendar'), 100);
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'calendar' }
                 }));
@@ -122,22 +120,30 @@ const appModule = {
         }
     },
 
-    // Setup "Back to Dashboard" buttons
-    setupBackToDashboardButtons() {
+    // Setup "Back to Dashboard" buttons and section action buttons
+    setupSectionButtons() {
+        // Back to Dashboard buttons
         const backToDashboardFromChores = document.getElementById('backToDashboardFromChores');
         const backToDashboardFromMessages = document.getElementById('backToDashboardFromMessages');
         const backToDashboardFromAnnouncements = document.getElementById('backToDashboardFromAnnouncements');
         const backToDashboardFromCalendar = document.getElementById('backToDashboardFromCalendar');
 
+        // Action buttons (Add content)
+        const addChoreBtn = document.getElementById('addChoreBtn');
+        const addMessageBtn = document.getElementById('addMessageBtn');
+        const addAnnouncementBtn = document.getElementById('addAnnouncementBtn');
+        const addEventBtn = document.getElementById('addEventBtn');
+
+        // Voice buttons for each section
+        const voiceChoreBtn = document.getElementById('voiceChoreBtn');
+        const voiceMessageBtn = document.getElementById('voiceMessageBtn');
+        const voiceAnnouncementBtn = document.getElementById('voiceAnnouncementBtn');
+        const voiceEventBtn = document.getElementById('voiceEventBtn');
+
         // Back to dashboard from chores
         if (backToDashboardFromChores) {
             backToDashboardFromChores.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('dashboard');
-                // Remove FAB when returning to dashboard
-                if (this.currentFAB) {
-                    this.currentFAB.remove();
-                    this.currentFAB = null;
-                }
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'dashboard' }
                 }));
@@ -148,11 +154,6 @@ const appModule = {
         if (backToDashboardFromMessages) {
             backToDashboardFromMessages.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('dashboard');
-                // Remove FAB when returning to dashboard
-                if (this.currentFAB) {
-                    this.currentFAB.remove();
-                    this.currentFAB = null;
-                }
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'dashboard' }
                 }));
@@ -163,11 +164,6 @@ const appModule = {
         if (backToDashboardFromAnnouncements) {
             backToDashboardFromAnnouncements.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('dashboard');
-                // Remove FAB when returning to dashboard
-                if (this.currentFAB) {
-                    this.currentFAB.remove();
-                    this.currentFAB = null;
-                }
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'dashboard' }
                 }));
@@ -178,74 +174,230 @@ const appModule = {
         if (backToDashboardFromCalendar) {
             backToDashboardFromCalendar.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('dashboard');
-                // Remove FAB when returning to dashboard
-                if (this.currentFAB) {
-                    this.currentFAB.remove();
-                    this.currentFAB = null;
-                }
                 window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
                     detail: { tab: 'dashboard' }
                 }));
             });
         }
-    },
 
-    // Setup floating action buttons for each section
-    setupFloatingActionButtons() {
-        // Remove any existing FABs first
-        document.querySelectorAll('.fab').forEach(fab => fab.remove());
-
-        // We'll create FABs dynamically when switching to each tab
-        this.currentFAB = null;
-    },
-
-    // Create FAB for specific section
-    createFAB(section) {
-        // Remove existing FAB if any
-        if (this.currentFAB) {
-            this.currentFAB.remove();
+        // Add content buttons
+        if (addChoreBtn) {
+            addChoreBtn.addEventListener('click', () => {
+                this.openInputModal('chores');
+            });
         }
 
-        const fab = document.createElement('button');
-        fab.className = `fab fab-${section}`;
-        fab.innerHTML = '<i class="fas fa-plus"></i>';
+        if (addMessageBtn) {
+            addMessageBtn.addEventListener('click', () => {
+                this.openInputModal('messages');
+            });
+        }
 
-        // Base styles that are consistent across all FABs
-        fab.style.cssText = `
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            color: white;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        if (addAnnouncementBtn) {
+            addAnnouncementBtn.addEventListener('click', () => {
+                this.openInputModal('announcements');
+            });
+        }
+
+        if (addEventBtn) {
+            addEventBtn.addEventListener('click', () => {
+                this.openInputModal('calendar');
+            });
+        }
+
+        // Voice buttons - trigger context-specific voice input
+        if (voiceChoreBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceChoreBtn.addEventListener('click', () => {
+                this.startContextualVoiceInput('chore');
+            });
+        }
+
+        if (voiceMessageBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceMessageBtn.addEventListener('click', () => {
+                this.startContextualVoiceInput('message');
+            });
+        }
+
+        if (voiceAnnouncementBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceAnnouncementBtn.addEventListener('click', () => {
+                this.startContextualVoiceInput('announcement');
+            });
+        }
+
+        if (voiceEventBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceEventBtn.addEventListener('click', () => {
+                this.startContextualVoiceInput('event');
+            });
+        }
+
+        // Voice help buttons
+        const voiceChoreHelpBtn = document.getElementById('voiceChoreHelpBtn');
+        const voiceMessageHelpBtn = document.getElementById('voiceMessageHelpBtn');
+        const voiceAnnouncementHelpBtn = document.getElementById('voiceAnnouncementHelpBtn');
+        const voiceEventHelpBtn = document.getElementById('voiceEventHelpBtn');
+
+        if (voiceChoreHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceChoreHelpBtn.addEventListener('click', () => {
+                this.showContextualVoiceHelp('chore');
+            });
+        }
+
+        if (voiceMessageHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceMessageHelpBtn.addEventListener('click', () => {
+                this.showContextualVoiceHelp('message');
+            });
+        }
+
+        if (voiceAnnouncementHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceAnnouncementHelpBtn.addEventListener('click', () => {
+                this.showContextualVoiceHelp('announcement');
+            });
+        }
+
+        if (voiceEventHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
+            voiceEventHelpBtn.addEventListener('click', () => {
+                this.showContextualVoiceHelp('event');
+            });
+        }
+
+        // Hide voice buttons if not supported
+        if (!window.RoommatePortal.voiceCommands?.isSupported) {
+            setTimeout(() => {
+                window.RoommatePortal.voiceCommands?.updateVoiceSectionButtons();
+            }, 100);
+        }
+    },
+
+    // Start contextual voice input for specific section
+    startContextualVoiceInput(context) {
+        if (!window.RoommatePortal.voiceCommands?.isSupported) {
+            window.RoommatePortal.utils?.showNotification('❌ Voice commands not supported');
+            return;
+        }
+
+        // Store the context and trigger voice input
+        window.RoommatePortal.voiceCommands.currentContext = context;
+        window.RoommatePortal.voiceCommands.startUnifiedVoiceInput();
+
+        // Show context-specific status
+        const contextMessages = {
+            'chore': '🧹 Voice: Say a chore like "clean the bathroom" or "vacuum living room"',
+            'message': '💬 Voice: Say a message like "pizza party tonight" or "meeting at 7pm"',
+            'announcement': '📢 Voice: Say an announcement like "rent due Friday" or "house meeting Sunday"',
+            'event': '📅 Voice: Say an event like "party Saturday" or "meeting tomorrow at 6pm"'
+        };
+
+        if (window.innerWidth <= 768) {
+            window.RoommatePortal.voiceCommands.showVoiceStatus(contextMessages[context] || '🎤 Voice: Speak your command', 'info');
+        } else {
+            window.RoommatePortal.utils?.showNotification(contextMessages[context] || '🎤 Voice: Speak your command');
+        }
+    },
+
+    // Show contextual voice help for specific section
+    showContextualVoiceHelp(context) {
+        const contextHelp = {
+            'chore': {
+                title: '🧹 Voice Commands for Chores',
+                examples: [
+                    'clean the bathroom',
+                    'vacuum living room',
+                    'wash the dishes',
+                    'take out trash',
+                    'organize kitchen'
+                ],
+                tips: 'Just say the chore task naturally. The system will automatically format it properly.'
+            },
+            'message': {
+                title: '💬 Voice Commands for Messages',
+                examples: [
+                    'pizza party tonight',
+                    'meeting at 7pm',
+                    'movie night Friday',
+                    'grocery shopping tomorrow',
+                    'game night this weekend'
+                ],
+                tips: 'Say your message naturally. Perfect for quick updates to roommates.'
+            },
+            'announcement': {
+                title: '📢 Voice Commands for Announcements',
+                examples: [
+                    'rent due Friday',
+                    'house meeting Sunday',
+                    'maintenance visit tomorrow',
+                    'party next weekend',
+                    'new house rule about guests'
+                ],
+                tips: 'Speak important information that everyone should know about.'
+            },
+            'event': {
+                title: '📅 Voice Commands for Events',
+                examples: [
+                    'party Saturday at 8pm',
+                    'meeting tomorrow at 6',
+                    'dinner Friday night',
+                    'study session Sunday',
+                    'cleaning day this weekend'
+                ],
+                tips: 'Say the event naturally. Event creation is coming soon!'
+            }
+        };
+
+        const help = contextHelp[context];
+        if (!help) return;
+
+        const helpModal = document.createElement('div');
+        helpModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50 p-4';
+        helpModal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">${help.title}</h2>
+                    <button class="text-gray-500 hover:text-gray-700" onclick="this.closest('.fixed').remove()">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
+                        <p class="text-sm text-gray-700 font-medium">
+                            🎤 <strong>Just click Voice and speak naturally!</strong>
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Examples:</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            ${help.examples.map(example => `<li>• "${example}"</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-1">💡 Tip</h4>
+                        <p class="text-sm text-blue-700">${help.tips}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-center space-x-3">
+                    <button 
+                        class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors"
+                        onclick="window.RoommatePortal.app.startContextualVoiceInput('${context}'); this.closest('.fixed').remove();"
+                    >
+                        Try Voice Now
+                    </button>
+                    <button 
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                        onclick="this.closest('.fixed').remove()"
+                    >
+                        Got it!
+                    </button>
+                </div>
+            </div>
         `;
 
-        // Add hover effects
-        fab.addEventListener('mouseenter', () => {
-            fab.style.transform = 'scale(1.1)';
-        });
-
-        fab.addEventListener('mouseleave', () => {
-            fab.style.transform = 'scale(1)';
-        });
-
-        // Add click handler
-        fab.addEventListener('click', () => {
-            this.openInputModal(section);
-        });
-
-        document.body.appendChild(fab);
-        this.currentFAB = fab;
+        document.body.appendChild(helpModal);
     },
+
+
 
     // Open input modal
     openInputModal(section) {
@@ -665,6 +817,8 @@ const appModule = {
             }
         });
     },
+
+
 };
 
 // Export app module and auto-initialize
