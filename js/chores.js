@@ -121,7 +121,6 @@ const choresModule = {
                     completed: false,
                     dateAdded: new Date().toLocaleDateString(),
                     priority: 'medium',
-                    householdId: currentHousehold.id,
                     createdBy: currentUser.uid,
                     createdByName: currentUser.displayName,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -133,9 +132,12 @@ const choresModule = {
                     chore.text_encrypted = encryptedData.text_encrypted;
                 }
 
-                // Add to Firestore
+                // Add to Firestore subcollection
                 const { db } = window.RoommatePortal.config;
-                await db.collection('chores').add(chore);
+                await db.collection('households')
+                    .doc(currentHousehold.id)
+                    .collection('chores')
+                    .add(chore);
 
                 // Clear form
                 elements.choreInput.value = '';
@@ -165,8 +167,9 @@ const choresModule = {
             window.RoommatePortal.state.setChoresListener(null);
         }
 
-        const listener = db.collection('chores')
-            .where('householdId', '==', currentHousehold.id)
+        const listener = db.collection('households')
+            .doc(currentHousehold.id)
+            .collection('chores')
             .onSnapshot(async (snapshot) => {
                 let choresList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -342,10 +345,15 @@ const choresModule = {
                 completedByName: chore.completedByName || firebase.firestore.FieldValue.delete()
             };
 
-            db.collection('chores').doc(id).update(updateData).catch(error => {
-                console.error('Error updating chore:', error);
-                window.RoommatePortal.utils.showNotification('❌ Failed to update chore. Please try again.');
-            });
+            db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('chores')
+                .doc(id)
+                .update(updateData)
+                .catch(error => {
+                    console.error('Error updating chore:', error);
+                    window.RoommatePortal.utils.showNotification('❌ Failed to update chore. Please try again.');
+                });
         }
     },
 
@@ -369,22 +377,26 @@ const choresModule = {
 
             // Update in Firestore
             const { db } = window.RoommatePortal.config;
-            db.collection('chores').doc(id).update({
-                completed: true,
-                completedDate: chore.completedDate,
-                completedBy: chore.completedBy,
-                completedByName: chore.completedByName
-            }).then(() => {
-                // Award points only if rewards system is enabled and points value is greater than 0
-                if (window.RoommatePortal.rewards?.isRewardsEnabled() && chore.points > 0) {
-                    window.RoommatePortal.rewards.awardPointsForChore(chore.id, chore.text, chore.points);
-                }
+            db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('chores')
+                .doc(id)
+                .update({
+                    completed: true,
+                    completedDate: chore.completedDate,
+                    completedBy: chore.completedBy,
+                    completedByName: chore.completedByName
+                }).then(() => {
+                    // Award points only if rewards system is enabled and points value is greater than 0
+                    if (window.RoommatePortal.rewards?.isRewardsEnabled() && chore.points > 0) {
+                        window.RoommatePortal.rewards.awardPointsForChore(chore.id, chore.text, chore.points);
+                    }
 
-                window.RoommatePortal.utils.showNotification('🎉 Awesome! Chore marked as complete!');
-            }).catch(error => {
-                console.error('Error updating chore:', error);
-                window.RoommatePortal.utils.showNotification('❌ Failed to update chore. Please try again.');
-            });
+                    window.RoommatePortal.utils.showNotification('🎉 Awesome! Chore marked as complete!');
+                }).catch(error => {
+                    console.error('Error updating chore:', error);
+                    window.RoommatePortal.utils.showNotification('❌ Failed to update chore. Please try again.');
+                });
         }
     },
 
@@ -400,7 +412,11 @@ const choresModule = {
 
         if (confirm('Are you sure you want to delete this chore?')) {
             const { db } = window.RoommatePortal.config;
-            db.collection('chores').doc(id).delete()
+            db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('chores')
+                .doc(id)
+                .delete()
                 .then(() => {
                     window.RoommatePortal.utils.showNotification('🗑️ Chore deleted');
                 })

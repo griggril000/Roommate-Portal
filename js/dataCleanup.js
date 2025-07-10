@@ -87,8 +87,10 @@ const dataCleanup = {
                 // If this is the last member, delete all household data
                 const deleteBatch = db.batch();
 
-                const allChoresQuery = await db.collection('chores')
-                    .where('householdId', '==', householdId)
+                // Delete all chores in the household (now from subcollection)
+                const allChoresQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('chores')
                     .get();
 
                 allChoresQuery.docs.forEach(doc => {
@@ -137,8 +139,9 @@ const dataCleanup = {
                 const updateBatch = db.batch();
 
                 // Unassign chores assigned to this user (set to "Unassigned")
-                const userAssignedChoresQuery = await db.collection('chores')
-                    .where('householdId', '==', householdId)
+                const userAssignedChoresQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('chores')
                     .where('assignee', '==', userDisplayName)
                     .get();
 
@@ -149,8 +152,9 @@ const dataCleanup = {
                 });
 
                 // Update ALL chores created by this user to mark as "former-member" (preserve all chores)
-                const userCreatedChoresQuery = await db.collection('chores')
-                    .where('householdId', '==', householdId)
+                const userCreatedChoresQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('chores')
                     .where('createdBy', '==', userId)
                     .get();
 
@@ -242,8 +246,9 @@ const dataCleanup = {
             const batch = db.batch();
 
             // Delete all chores in the household
-            const choresQuery = await db.collection('chores')
-                .where('householdId', '==', householdId)
+            const choresQuery = await db.collection('households')
+                .doc(householdId)
+                .collection('chores')
                 .get();
 
             choresQuery.docs.forEach(doc => {

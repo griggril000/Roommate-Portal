@@ -393,46 +393,61 @@ const householdManagement = {
             });
 
             // 4. Update all chores created by this user
-            const choresQuery = await db.collection('chores')
-                .where('householdId', '==', currentHousehold.id)
+            const choresQuery = await db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('chores')
                 .where('createdBy', '==', userId)
                 .get();
 
             const choreUpdates = [];
             choresQuery.docs.forEach(doc => {
                 choreUpdates.push(
-                    db.collection('chores').doc(doc.id).update({
-                        createdByName: newName
-                    })
+                    db.collection('households')
+                        .doc(currentHousehold.id)
+                        .collection('chores')
+                        .doc(doc.id)
+                        .update({
+                            createdByName: newName
+                        })
                 );
             });
 
             // 5. Update all chores completed by this user
-            const completedChoresQuery = await db.collection('chores')
-                .where('householdId', '==', currentHousehold.id)
+            const completedChoresQuery = await db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('chores')
                 .where('completedBy', '==', userId)
                 .get();
 
             completedChoresQuery.docs.forEach(doc => {
                 choreUpdates.push(
-                    db.collection('chores').doc(doc.id).update({
-                        completedByName: newName
-                    })
+                    db.collection('households')
+                        .doc(currentHousehold.id)
+                        .collection('chores')
+                        .doc(doc.id)
+                        .update({
+                            completedByName: newName
+                        })
                 );
             });
 
             // 6. Update all chores assigned to this user (by name)
             if (oldName) {
-                const assignedChoresQuery = await db.collection('chores')
-                    .where('householdId', '==', currentHousehold.id)
+                const assignedChoresQuery = await db.collection('households')
+                    .doc(currentHousehold.id)
+                    .collection('chores')
                     .where('assignee', '==', oldName)
                     .get();
 
                 assignedChoresQuery.docs.forEach(doc => {
                     choreUpdates.push(
-                        db.collection('chores').doc(doc.id).update({
-                            assignee: newName
-                        })
+                        db.collection('households')
+                            .doc(currentHousehold.id)
+                            .collection('chores')
+                            .doc(doc.id)
+                            .update({
+                                assignee: newName
+                            })
                     );
                 });
             }
