@@ -10,6 +10,7 @@ const dataCleanup = {
         const choresListener = window.RoommatePortal.state.getChoresListener();
         const messagesListener = window.RoommatePortal.state.getMessagesListener();
         const announcementsListener = window.RoommatePortal.state.getAnnouncementsListener();
+        const eventsListener = window.RoommatePortal.state.getEventsListener();
 
         if (choresListener) {
             choresListener();
@@ -24,6 +25,11 @@ const dataCleanup = {
         if (announcementsListener) {
             announcementsListener();
             window.RoommatePortal.state.setAnnouncementsListener(null);
+        }
+
+        if (eventsListener) {
+            eventsListener();
+            window.RoommatePortal.state.setEventsListener(null);
         }
 
         // Clear data arrays
@@ -325,7 +331,72 @@ const dataCleanup = {
                 throw new Error(`Failed to delete household: ${error.message || error.code || 'Unknown error'}`);
             }
         }
-    }
+    },
+
+    // Delete all private events for a specific user (called when user leaves or deletes account)
+    async deleteUserPrivateEvents(userId, householdId) {
+        try {
+            const eventsCollection = firebase.firestore()
+                .collection('households')
+                .doc(householdId)
+                .collection('events');
+
+            // Query for private events created by this user
+            const privateEventsQuery = await eventsCollection
+                .where('createdBy', '==', userId)
+                .where('privacy', '==', 'private')
+                .get();
+
+            if (privateEventsQuery.empty) {
+                console.log(`Calendar: No private events found for user ${userId} in household ${householdId}`);
+                return;
+            }
+
+            // Delete events in batches
+            const batch = firebase.firestore().batch();
+            privateEventsQuery.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+            console.log(`Calendar: Deleted ${privateEventsQuery.docs.length} private events for user ${userId} in household ${householdId}`);
+
+        } catch (error) {
+            console.error('Calendar: Error deleting user private events:', error);
+            throw new Error(`Failed to delete private events: ${error.message || error.code || 'Unknown error'}`);
+        }
+    },
+
+    // Delete all events for a household (called when household is deleted)
+    async deleteAllHouseholdEvents(householdId) {
+        try {
+            const eventsCollection = firebase.firestore()
+                .collection('households')
+                .doc(householdId)
+                .collection('events');
+
+            // Get all events in the household
+            const allEventsQuery = await eventsCollection.get();
+
+            if (allEventsQuery.empty) {
+                console.log(`Calendar: No events found for household ${householdId}`);
+                return;
+            }
+
+            // Delete events in batches
+            const batch = firebase.firestore().batch();
+            allEventsQuery.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+            console.log(`Calendar: Deleted ${allEventsQuery.docs.length} events for household ${householdId}`);
+
+        } catch (error) {
+            console.error('Calendar: Error deleting household events:', error);
+            throw new Error(`Failed to delete household events: ${error.message || error.code || 'Unknown error'}`);
+        }
+    },
 };
 
 // Export dataCleanup module to global namespace

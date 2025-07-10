@@ -259,6 +259,72 @@ const utils = {
         // For older dates and dates more than a week in the future, show full date
         return inputDate.toLocaleDateString() + ' ' + inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     },
+
+    // Helper function to get local date string for HTML date input (YYYY-MM-DD)
+    getLocalDateString(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    },
+
+    // Helper function to get local time string for HTML time input (HH:MM)
+    getLocalTimeString(date) {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    },
+
+    // Helper function to create a date object from date and time inputs that preserves local time
+    createLocalDateTime(dateStr, timeStr) {
+        // Parse date components
+        const [year, month, day] = dateStr.split('-').map(Number);
+        // Parse time components
+        const [hours, minutes] = timeStr.split(':').map(Number);
+
+        // Create date object using local timezone
+        return new Date(year, month - 1, day, hours, minutes);
+    },
+
+    // Helper function to create a local datetime string that preserves timezone
+    getLocalDateTimeString(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    },
+
+    // Helper function to parse local datetime string back to Date object
+    parseLocalDateTimeString(dateTimeStr) {
+        try {
+            // Handle both old ISO format and new local format
+            if (dateTimeStr.includes('Z') || dateTimeStr.includes('+')) {
+                // Old ISO format - convert from UTC
+                return new Date(dateTimeStr);
+            } else {
+                // New local format - parse as local time
+                const [datePart, timePart] = dateTimeStr.split('T');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+                return new Date(year, month - 1, day, hours, minutes, seconds || 0);
+            }
+        } catch (error) {
+            console.error('Utils: Error parsing datetime string:', dateTimeStr, error);
+            // Return a very old date so the event gets cleaned up
+            return new Date('1970-01-01');
+        }
+    },
+
+    // Check if date is today
+    isToday(date) {
+        const today = new Date();
+        return date.toDateString() === today.toDateString();
+    },
 };
 
 // Export utils to global namespace

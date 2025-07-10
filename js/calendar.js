@@ -95,11 +95,11 @@ const calendarModule = {
         }
 
         // Create start and end datetime objects using helper function
-        const startDateTime = this.createLocalDateTime(eventDate, eventTime);
+        const startDateTime = window.RoommatePortal.utils.createLocalDateTime(eventDate, eventTime);
         let endDateTime;
 
         if (eventEndDate && eventEndTime) {
-            endDateTime = this.createLocalDateTime(eventEndDate, eventEndTime);
+            endDateTime = window.RoommatePortal.utils.createLocalDateTime(eventEndDate, eventEndTime);
         } else {
             // Default to 1 hour after start time
             endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
@@ -125,8 +125,8 @@ const calendarModule = {
             const eventData = {
                 title: encryptedData.title,
                 description: encryptedData.description,
-                startDate: this.getLocalDateTimeString(startDateTime),
-                endDate: this.getLocalDateTimeString(endDateTime),
+                startDate: window.RoommatePortal.utils.getLocalDateTimeString(startDateTime),
+                endDate: window.RoommatePortal.utils.getLocalDateTimeString(endDateTime),
                 privacy: eventPrivacy,
                 createdBy: currentUser.uid,
                 createdByName: currentUser.displayName || currentUser.email,
@@ -153,7 +153,7 @@ const calendarModule = {
             } else {
                 // Creating new event
                 eventData.id = Date.now().toString();
-                eventData.createdAt = this.getLocalDateTimeString(new Date());
+                eventData.createdAt = window.RoommatePortal.utils.getLocalDateTimeString(new Date());
                 await this.saveEvent(eventData);
             }
 
@@ -375,8 +375,7 @@ const calendarModule = {
 
     // Check if date is today
     isToday(date) {
-        const today = new Date();
-        return date.toDateString() === today.toDateString();
+        return window.RoommatePortal.utils.isToday(date);
     },
 
     // Get events for a specific day
@@ -384,8 +383,8 @@ const calendarModule = {
         const currentUser = window.RoommatePortal.state.getCurrentUser();
 
         const filteredEvents = this.events.filter(event => {
-            const eventStart = this.parseLocalDateTimeString(event.startDate);
-            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+            const eventStart = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
             // Check if event occurs on this day
             const eventOnDay = eventStart.toDateString() === date.toDateString() ||
@@ -407,8 +406,8 @@ const calendarModule = {
         const currentUser = window.RoommatePortal.state.getCurrentUser();
 
         const filteredEvents = this.events.filter(event => {
-            const eventStart = this.parseLocalDateTimeString(event.startDate);
-            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+            const eventStart = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
             // Check if event occurs on this day and is single-day
             const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
@@ -432,8 +431,8 @@ const calendarModule = {
 
         // Get all multi-day events that intersect with this month
         const multiDayEvents = this.events.filter(event => {
-            const eventStart = this.parseLocalDateTimeString(event.startDate);
-            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+            const eventStart = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
             // Check if it's a multi-day event
             const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
@@ -457,8 +456,8 @@ const calendarModule = {
 
         // Sort events by start date to prioritize earlier events
         multiDayEvents.sort((a, b) => {
-            const aStart = this.parseLocalDateTimeString(a.startDate);
-            const bStart = this.parseLocalDateTimeString(b.startDate);
+            const aStart = window.RoommatePortal.utils.parseLocalDateTimeString(a.startDate);
+            const bStart = window.RoommatePortal.utils.parseLocalDateTimeString(b.startDate);
             return aStart - bStart;
         });
 
@@ -470,8 +469,8 @@ const calendarModule = {
         const eventRows = [];
 
         eventsToDisplay.forEach(event => {
-            const eventStart = this.parseLocalDateTimeString(event.startDate);
-            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+            const eventStart = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
             console.log('Calendar: Processing multi-day event:', event.title,
                 'Start:', eventStart.toLocaleDateString(),
@@ -671,7 +670,7 @@ const calendarModule = {
         // Add click handler
         spanningEvent.addEventListener('click', (e) => {
             e.stopPropagation();
-            const eventStartDate = this.parseLocalDateTimeString(event.startDate);
+            const eventStartDate = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
             const clickDate = new Date(eventStartDate.getFullYear(), eventStartDate.getMonth(), eventStartDate.getDate());
             const allDayEvents = this.getEventsForDay(clickDate);
             this.showDayEvents(clickDate, allDayEvents);
@@ -709,8 +708,8 @@ const calendarModule = {
                 eventElement.className = `event-item p-4 border rounded-lg mb-3 ${event.privacy === 'private' ? 'border-purple-200 bg-purple-50' : 'border-green-200 bg-green-50'
                     }`;
 
-                const startDateTime = this.parseLocalDateTimeString(event.startDate);
-                const endDateTime = this.parseLocalDateTimeString(event.endDate);
+                const startDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+                const endDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
                 // Check if event spans multiple days
                 const startDate = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate());
@@ -800,8 +799,8 @@ const calendarModule = {
             title: event.title,
             description: event.description || '',
             privacy: event.privacy,
-            startDate: this.parseLocalDateTimeString(event.startDate),
-            endDate: this.parseLocalDateTimeString(event.endDate)
+            startDate: window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate),
+            endDate: window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate)
         };
 
         // Show form modal using main.js method
@@ -937,19 +936,19 @@ const calendarModule = {
         }
 
         if (dateField) {
-            const dateValue = this.getLocalDateString(this.editingEventData.startDate);
+            const dateValue = window.RoommatePortal.utils.getLocalDateString(this.editingEventData.startDate);
             dateField.value = dateValue;
         }
         if (timeField) {
-            const timeValue = this.getLocalTimeString(this.editingEventData.startDate);
+            const timeValue = window.RoommatePortal.utils.getLocalTimeString(this.editingEventData.startDate);
             timeField.value = timeValue;
         }
         if (endDateField) {
-            const endDateValue = this.getLocalDateString(this.editingEventData.endDate);
+            const endDateValue = window.RoommatePortal.utils.getLocalDateString(this.editingEventData.endDate);
             endDateField.value = endDateValue;
         }
         if (endTimeField) {
-            const endTimeValue = this.getLocalTimeString(this.editingEventData.endDate);
+            const endTimeValue = window.RoommatePortal.utils.getLocalTimeString(this.editingEventData.endDate);
             endTimeField.value = endTimeValue;
         }
 
@@ -1025,8 +1024,8 @@ const calendarModule = {
 
         // Count upcoming events (next 7 days including events happening today)
         const upcomingEvents = this.events.filter(event => {
-            const eventStart = this.parseLocalDateTimeString(event.startDate);
-            const eventEnd = this.parseLocalDateTimeString(event.endDate);
+            const eventStart = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
             // Include events that:
             // 1. Start in the future (within next 7 days)
@@ -1093,7 +1092,7 @@ const calendarModule = {
                     return;
                 }
 
-                const eventEnd = this.parseLocalDateTimeString(event.endDate);
+                const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
                 // Skip events with invalid dates
                 if (isNaN(eventEnd.getTime())) {
@@ -1144,129 +1143,14 @@ const calendarModule = {
         }
     },
 
-    // Helper function to get local date string for HTML date input (YYYY-MM-DD)
-    getLocalDateString(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    },
-
-    // Helper function to get local time string for HTML time input (HH:MM)
-    getLocalTimeString(date) {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${hours}:${minutes}`;
-    },
-
-    // Helper function to create a date object from date and time inputs that preserves local time
-    createLocalDateTime(dateStr, timeStr) {
-        // Parse date components
-        const [year, month, day] = dateStr.split('-').map(Number);
-        // Parse time components
-        const [hours, minutes] = timeStr.split(':').map(Number);
-
-        // Create date object using local timezone
-        return new Date(year, month - 1, day, hours, minutes);
-    },
-
-    // Helper function to create a local datetime string that preserves timezone
-    getLocalDateTimeString(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    },
-
-    // Helper function to parse local datetime string back to Date object
-    parseLocalDateTimeString(dateTimeStr) {
-        try {
-            // Handle both old ISO format and new local format
-            if (dateTimeStr.includes('Z') || dateTimeStr.includes('+')) {
-                // Old ISO format - convert from UTC
-                return new Date(dateTimeStr);
-            } else {
-                // New local format - parse as local time
-                const [datePart, timePart] = dateTimeStr.split('T');
-                const [year, month, day] = datePart.split('-').map(Number);
-                const [hours, minutes, seconds] = timePart.split(':').map(Number);
-
-                return new Date(year, month - 1, day, hours, minutes, seconds || 0);
-            }
-        } catch (error) {
-            console.error('Calendar: Error parsing datetime string:', dateTimeStr, error);
-            // Return a very old date so the event gets cleaned up
-            return new Date('1970-01-01');
-        }
-    },
-
     // Delete all private events for a specific user (called when user leaves or deletes account)
     async deleteUserPrivateEvents(userId, householdId) {
-        try {
-            const eventsCollection = firebase.firestore()
-                .collection('households')
-                .doc(householdId)
-                .collection('events');
-
-            // Query for private events created by this user
-            const privateEventsQuery = await eventsCollection
-                .where('createdBy', '==', userId)
-                .where('privacy', '==', 'private')
-                .get();
-
-            if (privateEventsQuery.empty) {
-                console.log(`Calendar: No private events found for user ${userId} in household ${householdId}`);
-                return;
-            }
-
-            // Delete events in batches
-            const batch = firebase.firestore().batch();
-            privateEventsQuery.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-
-            await batch.commit();
-            console.log(`Calendar: Deleted ${privateEventsQuery.docs.length} private events for user ${userId} in household ${householdId}`);
-
-        } catch (error) {
-            console.error('Calendar: Error deleting user private events:', error);
-            throw new Error(`Failed to delete private events: ${error.message || error.code || 'Unknown error'}`);
-        }
+        return await window.RoommatePortal.dataCleanup.deleteUserPrivateEvents(userId, householdId);
     },
 
     // Delete all events for a household (called when household is deleted)
     async deleteAllHouseholdEvents(householdId) {
-        try {
-            const eventsCollection = firebase.firestore()
-                .collection('households')
-                .doc(householdId)
-                .collection('events');
-
-            // Get all events in the household
-            const allEventsQuery = await eventsCollection.get();
-
-            if (allEventsQuery.empty) {
-                console.log(`Calendar: No events found for household ${householdId}`);
-                return;
-            }
-
-            // Delete events in batches
-            const batch = firebase.firestore().batch();
-            allEventsQuery.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-
-            await batch.commit();
-            console.log(`Calendar: Deleted ${allEventsQuery.docs.length} events for household ${householdId}`);
-
-        } catch (error) {
-            console.error('Calendar: Error deleting household events:', error);
-            throw new Error(`Failed to delete household events: ${error.message || error.code || 'Unknown error'}`);
-        }
+        return await window.RoommatePortal.dataCleanup.deleteAllHouseholdEvents(householdId);
     },
 
     // Update form button text based on editing state
