@@ -21,6 +21,23 @@ const household = {
                     const householdData = { id: householdDoc.id, ...householdDoc.data() };
                     window.RoommatePortal.state.setCurrentHousehold(householdData);
 
+                    // Decrypt user data if encrypted
+                    let userData = userDoc.data();
+                    try {
+                        userData = await window.RoommatePortal.encryption.decryptSensitiveData(userData, ['email', 'displayName']);
+                    } catch (error) {
+                        console.error('Error decrypting user data:', error);
+                    }
+
+                    // Update the current user state with decrypted data
+                    if (userData.email || userData.displayName) {
+                        window.RoommatePortal.state.setCurrentUser({
+                            ...currentUser,
+                            email: userData.email || currentUser.email,
+                            displayName: userData.displayName || currentUser.displayName
+                        });
+                    }
+
                     // Dispatch household change event for notifications
                     window.dispatchEvent(new CustomEvent('roommatePortal:householdChange', {
                         detail: { household: householdData }
@@ -264,24 +281,45 @@ const household = {
 
             const householdRef = await db.collection('households').add(householdData);
 
-            // Update user document with household reference
-            await db.collection('users').doc(currentUser.uid).set({
-                householdId: householdRef.id,
+            // Now that household is created, set it in state so encryption can work
+            const createdHousehold = { id: householdRef.id, ...householdData };
+            window.RoommatePortal.state.setCurrentHousehold(createdHousehold);
+
+            // Encrypt user data for storage using the household's encryption key
+            const encryptedUserData = await window.RoommatePortal.encryption.encryptDataWithKey({
                 email: currentUser.email,
                 displayName: currentUser.displayName || currentUser.email
-            }, { merge: true });
+            }, ['email', 'displayName'], householdData.encryptionKey);
 
-            const household = { id: householdRef.id, ...householdData };
-            window.RoommatePortal.state.setCurrentHousehold(household);
+            // Update user document with household reference and encrypted data
+            const userData = {
+                householdId: householdRef.id,
+                email: encryptedUserData.email,
+                displayName: encryptedUserData.displayName
+            };
+
+            // Add encryption flags if fields were encrypted
+            if (encryptedUserData.email_encrypted) {
+                userData.email_encrypted = encryptedUserData.email_encrypted;
+            }
+            if (encryptedUserData.displayName_encrypted) {
+                userData.displayName_encrypted = encryptedUserData.displayName_encrypted;
+            }
+
+            await db.collection('users').doc(currentUser.uid).set(userData, { merge: true });
 
             // Dispatch household change event for notifications
             window.dispatchEvent(new CustomEvent('roommatePortal:householdChange', {
-                detail: { household: household }
+                detail: { household: createdHousehold }
             }));
 
             this.hideHouseholdModal();
             window.RoommatePortal.ui.updateUIForAuth();
-            this.loadHouseholdData();
+
+            // Add a small delay to ensure the household is fully set in state
+            setTimeout(() => {
+                this.loadHouseholdData();
+            }, 100);
 
             window.RoommatePortal.utils.showNotification(`🎉 Household "${householdName}" created! Code: ${householdCode}`);
         } catch (error) {
@@ -333,7 +371,7 @@ const household = {
             }
 
             // Add user to household
-            await db.collection('households').doc(householdDoc.id).update({
+            const updateData = {
                 members: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
                 [`memberDetails.${currentUser.uid}`]: {
                     displayName: currentUser.displayName || currentUser.email,
@@ -346,26 +384,57 @@ const household = {
                 ...(householdData.encryptionKey ? {} : {
                     encryptionKey: window.RoommatePortal.encryption.generateEncryptionKey()
                 })
-            });
+            };
 
-            // Update user document
-            await db.collection('users').doc(currentUser.uid).set({
-                householdId: householdDoc.id,
+            await db.collection('households').doc(householdDoc.id).update(updateData);
+
+            // Get the encryption key (existing or newly created)
+            const encryptionKey = householdData.encryptionKey || updateData.encryptionKey;
+
+            // Set household in state first so other functions can access it
+            const joinedHousehold = {
+                id: householdDoc.id,
+                ...householdData,
+                // Include the encryption key if it was just created
+                ...(updateData.encryptionKey ? { encryptionKey: updateData.encryptionKey } : {})
+            };
+            window.RoommatePortal.state.setCurrentHousehold(joinedHousehold);
+
+            // Encrypt user data for storage using the household's encryption key
+            const encryptedUserData = await window.RoommatePortal.encryption.encryptDataWithKey({
                 email: currentUser.email,
                 displayName: currentUser.displayName || currentUser.email
-            }, { merge: true });
+            }, ['email', 'displayName'], encryptionKey);
 
-            const household = { id: householdDoc.id, ...householdData };
-            window.RoommatePortal.state.setCurrentHousehold(household);
+            // Update user document with encrypted data
+            const userData = {
+                householdId: householdDoc.id,
+                email: encryptedUserData.email,
+                displayName: encryptedUserData.displayName
+            };
+
+            // Add encryption flags if fields were encrypted
+            if (encryptedUserData.email_encrypted) {
+                userData.email_encrypted = encryptedUserData.email_encrypted;
+            }
+            if (encryptedUserData.displayName_encrypted) {
+                userData.displayName_encrypted = encryptedUserData.displayName_encrypted;
+            }
+
+            await db.collection('users').doc(currentUser.uid).set(userData, { merge: true });
 
             // Dispatch household change event for notifications
             window.dispatchEvent(new CustomEvent('roommatePortal:householdChange', {
-                detail: { household: household }
+                detail: { household: joinedHousehold }
             }));
 
             this.hideHouseholdModal();
             window.RoommatePortal.ui.updateUIForAuth();
-            this.loadHouseholdData();
+
+            // Add a small delay to ensure the household is fully set in state
+            setTimeout(() => {
+                this.loadHouseholdData();
+            }, 100);
 
             window.RoommatePortal.utils.showNotification(`🎉 Successfully joined household "${householdData.name}"!`);
         } catch (error) {

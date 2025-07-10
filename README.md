@@ -56,6 +56,7 @@ A modern, household-based roommate management application built with Firebase an
 - **Calendar Events**: Event titles and descriptions are encrypted
 - **Chores**: Chore descriptions are encrypted
 - **Rewards**: Reward names and descriptions are encrypted
+- **User Data**: Email addresses and display names are encrypted
 
 ### Key Management
 - **Persistent Keys**: Encryption keys are stored in the household document in Firebase
@@ -133,6 +134,5 @@ js/
 - **Responsive Design**: Works on desktop and mobile
 - **Real-time Updates**: No page refresh needed
 - **Intuitive Interface**: Clean, modern UI with clear navigation
-- **Keyboard Shortcuts**: Ctrl/Cmd + Enter to submit forms
 - **Visual Feedback**: Toast notifications for all actions
 - **Animated Interactions**: Smooth transitions and loading states

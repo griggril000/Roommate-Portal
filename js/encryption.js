@@ -108,10 +108,18 @@ const encryptionModule = {
     async getOrCreateHouseholdKey() {
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
         if (!currentHousehold) {
+            console.warn('No household available for encryption key retrieval');
             throw new Error('No household available');
         }
 
         const { db } = window.RoommatePortal.config;
+
+        // If household already has encryption key in state, use it
+        if (currentHousehold.encryptionKey) {
+            return currentHousehold.encryptionKey;
+        }
+
+        // Otherwise fetch from database
         const householdDoc = await db.collection('households').doc(currentHousehold.id).get();
 
         if (!householdDoc.exists) {
@@ -134,12 +142,36 @@ const encryptionModule = {
             return newKey;
         }
 
+        // Update local state with the key from database
+        currentHousehold.encryptionKey = householdData.encryptionKey;
+        window.RoommatePortal.state.setCurrentHousehold(currentHousehold);
+
         return householdData.encryptionKey;
     },
 
     // Encrypt sensitive fields in an object
     async encryptSensitiveData(data, sensitiveFields) {
-        const encryptionKey = await this.getOrCreateHouseholdKey();
+        try {
+            const encryptionKey = await this.getOrCreateHouseholdKey();
+            const encryptedData = { ...data };
+
+            for (const field of sensitiveFields) {
+                if (data[field] !== undefined && data[field] !== null) {
+                    encryptedData[field] = await this.encryptData(data[field], encryptionKey);
+                    encryptedData[`${field}_encrypted`] = true;
+                }
+            }
+
+            return encryptedData;
+        } catch (error) {
+            console.warn('Encryption failed, returning original data:', error.message);
+            // Return original data if encryption fails
+            return { ...data };
+        }
+    },
+
+    // Encrypt sensitive fields in an object using a specific key
+    async encryptDataWithKey(data, sensitiveFields, encryptionKey) {
         const encryptedData = { ...data };
 
         for (const field of sensitiveFields) {

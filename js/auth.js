@@ -299,7 +299,9 @@ const authModule = {
     // Prompt for user name if not available from auth provider
     async promptForUserName() {
         return new Promise((resolve, reject) => {
-            const currentUser = window.RoommatePortal.state.getCurrentUser();
+            const { auth } = window.RoommatePortal.config;
+            const currentUser = auth.currentUser;
+
             if (!currentUser) {
                 reject(new Error('No current user'));
                 return;
