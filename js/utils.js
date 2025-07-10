@@ -244,15 +244,19 @@ const utils = {
             return `Yesterday ${inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
         }
 
-        // Check if it's this week
+        // Check if it's this week (within the past 7 days)
         const weekAgo = new Date(now);
         weekAgo.setDate(weekAgo.getDate() - 7);
-        if (inputDate > weekAgo) {
+        // Check if it's more than a week in the future
+        const weekAhead = new Date(now);
+        weekAhead.setDate(weekAhead.getDate() + 7);
+
+        if (inputDate > weekAgo && inputDate < weekAhead) {
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             return `${days[inputDate.getDay()]} ${inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
         }
 
-        // For older dates, show full date
+        // For older dates and dates more than a week in the future, show full date
         return inputDate.toLocaleDateString() + ' ' + inputDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     },
 };
