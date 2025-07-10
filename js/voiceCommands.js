@@ -648,7 +648,7 @@ const voiceCommandsModule = {
             { id: 'announcementsSection', name: 'announcements' },
             { id: 'calendarSection', name: 'calendar' }
         ];
-        
+
         for (const section of sections) {
             const sectionElement = document.getElementById(section.id);
             if (sectionElement && !sectionElement.classList.contains('hidden')) {
@@ -656,7 +656,7 @@ const voiceCommandsModule = {
                 return section.name;
             }
         }
-        
+
         console.log('🎤 No specific context found, defaulting to dashboard');
         return 'dashboard'; // Default fallback
     },
@@ -866,12 +866,12 @@ const voiceCommandsModule = {
         const hasSeenIntro = localStorage.getItem('voiceCommandsIntroSeen');
         if (hasSeenIntro) return;
 
-        // Show a brief notification about voice commands
+        // Show a brief notification about voice commands on first use only
         setTimeout(() => {
             if (window.innerWidth <= 768) {
-                this.showVoiceStatus('🎤 New! Try "announce football next week" with the voice button', 'info');
+                this.showVoiceStatus('🎤 New! Voice commands available - click the microphone button for help', 'info');
             } else {
-                window.RoommatePortal.utils?.showNotification('🎤 Voice commands are now available! Try "announce football next week" or "add chore clean bathroom"');
+                window.RoommatePortal.utils?.showNotification('🎤 Voice commands are now available! Click the microphone button for help, or say "help" for assistance');
             }
 
             // Mark as seen
@@ -922,6 +922,13 @@ const voiceCommandsModule = {
 
         // Command patterns for unified voice input
         const patterns = [
+            // Help command - shows contextual help
+            {
+                pattern: /^(help|voice help|show help|commands)$/,
+                action: 'help',
+                extract: (match) => ({})
+            },
+
             // Announcements
             {
                 pattern: /^(announce|announcement)\s+(.+)$/,
@@ -1039,6 +1046,15 @@ const voiceCommandsModule = {
 
     // Execute the parsed command
     executeCommand(action, data) {
+        // Handle help command first (doesn't require user/household)
+        if (action === 'help') {
+            this.showVoiceStatus('📋 Opening help...', 'info');
+            setTimeout(() => {
+                this.showContextualVoiceHelp();
+            }, 500);
+            return;
+        }
+
         const currentUser = window.RoommatePortal.state?.getCurrentUser();
         const currentHousehold = window.RoommatePortal.state?.getCurrentHousehold();
 
@@ -1047,8 +1063,8 @@ const voiceCommandsModule = {
             return;
         }
 
-        // Capitalize and clean the text
-        const cleanText = data.text.charAt(0).toUpperCase() + data.text.slice(1);
+        // Capitalize and clean the text for content creation commands
+        const cleanText = data.text ? data.text.charAt(0).toUpperCase() + data.text.slice(1) : '';
 
         switch (action) {
             case 'announcement':
@@ -1222,7 +1238,10 @@ const voiceCommandsModule = {
         const voiceHelpSection = document.getElementById('voiceHelpSection');
         const voiceHelpBtn = document.getElementById('voiceHelpBtn');
 
-        if (voiceHelpSection && this.isSupported) {
+        // Only show help section on first time use
+        const hasSeenIntro = localStorage.getItem('voiceCommandsIntroSeen');
+
+        if (voiceHelpSection && this.isSupported && !hasSeenIntro) {
             voiceHelpSection.style.display = 'block';
 
             if (voiceHelpBtn) {
@@ -1230,6 +1249,9 @@ const voiceCommandsModule = {
                     this.showVoiceHelp();
                 });
             }
+        } else if (voiceHelpSection) {
+            // Hide the help section after first use
+            voiceHelpSection.style.display = 'none';
         }
 
         // Also update voice section buttons visibility
