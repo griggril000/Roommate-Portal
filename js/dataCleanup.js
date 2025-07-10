@@ -105,8 +105,9 @@ const dataCleanup = {
                 });
 
                 // Delete all announcements in the household
-                const allAnnouncementsQuery = await db.collection('announcements')
-                    .where('householdId', '==', householdId)
+                const allAnnouncementsQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('announcements')
                     .get();
 
                 allAnnouncementsQuery.docs.forEach(doc => {
@@ -192,8 +193,9 @@ const dataCleanup = {
                 });
 
                 // Delete all announcements posted by this user
-                const userAnnouncementsQuery = await db.collection('announcements')
-                    .where('householdId', '==', householdId)
+                const userAnnouncementsQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('announcements')
                     .where('authorId', '==', userId)
                     .get();
 
@@ -258,8 +260,9 @@ const dataCleanup = {
             });
 
             // Delete all announcements in the household
-            const announcementsQuery = await db.collection('announcements')
-                .where('householdId', '==', householdId)
+            const announcementsQuery = await db.collection('households')
+                .doc(householdId)
+                .collection('announcements')
                 .get();
 
             announcementsQuery.docs.forEach(doc => {

@@ -453,17 +453,22 @@ const householdManagement = {
             });
 
             // 8. Update all announcements posted by this user
-            const announcementsQuery = await db.collection('announcements')
-                .where('householdId', '==', currentHousehold.id)
+            const announcementsQuery = await db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('announcements')
                 .where('authorId', '==', userId)
                 .get();
 
             const announcementUpdates = [];
             announcementsQuery.docs.forEach(doc => {
                 announcementUpdates.push(
-                    db.collection('announcements').doc(doc.id).update({
-                        author: newName
-                    })
+                    db.collection('households')
+                        .doc(currentHousehold.id)
+                        .collection('announcements')
+                        .doc(doc.id)
+                        .update({
+                            author: newName
+                        })
                 );
             });
 

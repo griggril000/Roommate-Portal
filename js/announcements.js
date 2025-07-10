@@ -54,8 +54,7 @@ const announcementsModule = {
                 author: currentUser.displayName || currentUser.email,
                 authorId: currentUser.uid,
                 createdAt: new Date().toISOString(),
-                expiresAt: expirationInput?.value ? new Date(expirationInput.value).toISOString() : null,
-                householdId: currentHousehold.id
+                expiresAt: expirationInput?.value ? new Date(expirationInput.value).toISOString() : null
             };
 
             // Only add encrypted flags if the fields were actually encrypted
@@ -66,8 +65,12 @@ const announcementsModule = {
                 announcement.body_encrypted = encryptedData.body_encrypted;
             }
 
-            // Add to Firestore
-            await window.RoommatePortal.config.db.collection('announcements').add(announcement);
+            // Add to Firestore subcollection
+            await window.RoommatePortal.config.db
+                .collection('households')
+                .doc(currentHousehold.id)
+                .collection('announcements')
+                .add(announcement);
 
             window.RoommatePortal.utils.showNotification('📢 Announcement posted successfully!');
 
@@ -96,8 +99,9 @@ const announcementsModule = {
         }
 
         window.RoommatePortal.state.setAnnouncementsListener(window.RoommatePortal.config.db
+            .collection('households')
+            .doc(currentHousehold.id)
             .collection('announcements')
-            .where('householdId', '==', currentHousehold.id)
             .orderBy('createdAt', 'desc')
             .onSnapshot(async snapshot => {
                 let announcements = [];
@@ -198,7 +202,12 @@ const announcementsModule = {
             return;
         }
 
-        window.RoommatePortal.config.db.collection('announcements').doc(announcementId).delete()
+        window.RoommatePortal.config.db
+            .collection('households')
+            .doc(currentHousehold.id)
+            .collection('announcements')
+            .doc(announcementId)
+            .delete()
             .then(() => {
                 if (!isExpired) {
                     window.RoommatePortal.utils.showNotification('🗑️ Announcement deleted successfully!');
@@ -231,14 +240,20 @@ const announcementsModule = {
         const now = new Date();
 
         window.RoommatePortal.config.db
+            .collection('households')
+            .doc(currentHousehold.id)
             .collection('announcements')
-            .where('householdId', '==', currentHousehold.id)
             .where('expiresAt', '<', now.toISOString())
             .get()
             .then(snapshot => {
                 snapshot.forEach(doc => {
                     // Delete expired announcements silently
-                    window.RoommatePortal.config.db.collection('announcements').doc(doc.id).delete()
+                    window.RoommatePortal.config.db
+                        .collection('households')
+                        .doc(currentHousehold.id)
+                        .collection('announcements')
+                        .doc(doc.id)
+                        .delete()
                         .catch(error => {
                             console.error('Error auto-deleting expired announcement:', error);
                         });
