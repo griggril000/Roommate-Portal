@@ -477,6 +477,74 @@ const appModule = {
                 }
             });
         }
+
+        // Special handling for calendar forms - rebind all-day checkbox event
+        if (section === 'calendar') {
+            const allDayCheckbox = formClone.querySelector('input[type="checkbox"]');
+            if (allDayCheckbox) {
+                allDayCheckbox.addEventListener('change', (e) => {
+                    this.toggleAllDayFieldsInModal(formClone, e.target.checked);
+                });
+
+                // Set initial state
+                this.toggleAllDayFieldsInModal(formClone, allDayCheckbox.checked);
+            }
+        }
+    },    // Toggle all-day fields in modal form (similar to calendar.js logic)
+    toggleAllDayFieldsInModal(modalForm, isAllDay) {
+
+        // Find time containers and fields in the modal form using more robust selectors
+        // Look for divs that contain time inputs (since IDs are removed)
+        const allTimeInputs = modalForm.querySelectorAll('input[type="time"]');
+
+        // Find their parent containers by traversing up the DOM
+        const timeContainers = [];
+        allTimeInputs.forEach(timeInput => {
+            // Look for the parent div that contains the time input and its label
+            let container = timeInput.parentElement;
+            // Make sure we get the right container (usually the div containing both label and input)
+            if (container && (container.querySelector('label') || container.querySelector('input[type="time"]'))) {
+                timeContainers.push(container);
+            }
+        });
+
+        // Also look for the grid containers that need class adjustments
+        const gridContainers = modalForm.querySelectorAll('.grid.grid-cols-2');
+
+        if (isAllDay) {
+            // Hide time containers and remove required attribute from time fields
+            timeContainers.forEach((container) => {
+                container.style.display = 'none';
+            });
+
+            allTimeInputs.forEach((field) => {
+                field.removeAttribute('required');
+                field.value = '';
+            });
+
+            // Adjust grid layouts to single column
+            gridContainers.forEach((gridContainer) => {
+                gridContainer.className = 'grid grid-cols-1 gap-4';
+            });
+        } else {
+            // Show time containers and restore required attribute for start time
+            timeContainers.forEach((container) => {
+                container.style.display = 'block';
+            });
+
+            allTimeInputs.forEach((field, index) => {
+                // Only the first time field (start time) should be required
+                if (index === 0) {
+                    field.setAttribute('required', 'required');
+                }
+            });
+
+            // Restore grid layouts to two columns
+            gridContainers.forEach((gridContainer) => {
+                gridContainer.className = 'grid grid-cols-2 gap-4';
+            });
+        }
+
     },
 
     // Clear modal form after submission
@@ -485,10 +553,18 @@ const appModule = {
         inputs.forEach(input => {
             if (input.type === 'text' || input.type === 'email' || input.type === 'datetime-local' || input.type === 'date' || input.type === 'time' || input.tagName === 'TEXTAREA') {
                 input.value = '';
+            } else if (input.type === 'checkbox') {
+                input.checked = false;
             } else if (input.type === 'select-one') {
                 input.selectedIndex = 0;
             }
         });
+
+        // For calendar forms, reset the all-day fields visibility
+        const isCalendarForm = formClone.querySelector('input[type="checkbox"]');
+        if (isCalendarForm) {
+            this.toggleAllDayFieldsInModal(formClone, false);
+        }
     },
 
     // Copy form data from modal to original form
@@ -500,10 +576,12 @@ const appModule = {
         const modalInputs = modalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], input[type="date"], input[type="time"], textarea');
         const modalSelects = modalForm.querySelectorAll('select');
         const modalNumberInputs = modalForm.querySelectorAll('input[type="number"]');
+        const modalCheckboxes = modalForm.querySelectorAll('input[type="checkbox"]');
 
         const originalInputs = originalForm.querySelectorAll('input[type="text"], input[type="email"], input[type="datetime-local"], input[type="date"], input[type="time"], textarea');
         const originalSelects = originalForm.querySelectorAll('select');
         const originalNumberInputs = originalForm.querySelectorAll('input[type="number"]');
+        const originalCheckboxes = originalForm.querySelectorAll('input[type="checkbox"]');
 
         // Copy all inputs (text, email, datetime-local, textarea)
         modalInputs.forEach((modalInput, index) => {
@@ -516,6 +594,13 @@ const appModule = {
         modalSelects.forEach((modalSelect, index) => {
             if (originalSelects[index]) {
                 originalSelects[index].value = modalSelect.value;
+            }
+        });
+
+        // Copy checkbox elements
+        modalCheckboxes.forEach((modalCheckbox, index) => {
+            if (originalCheckboxes[index]) {
+                originalCheckboxes[index].checked = modalCheckbox.checked;
             }
         });
 

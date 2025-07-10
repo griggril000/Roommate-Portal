@@ -33,12 +33,113 @@ const calendarModule = {
 
     // Setup calendar form event listener
     setupCalendarForm() {
+
         const elements = window.RoommatePortal.state.elements;
         const addEventForm = document.getElementById('addEventForm');
-
         if (addEventForm) {
             addEventForm.addEventListener('submit', this.handleAddEvent.bind(this));
+        } else {
+            console.warn('⚠️ Add event form not found');
         }
+
+        // Setup all-day checkbox toggle
+        const allDayCheckbox = document.getElementById('eventAllDay');
+
+        if (allDayCheckbox) {
+            allDayCheckbox.addEventListener('change', (e) => {
+                this.toggleAllDayFields();
+            });
+            // this.toggleAllDayFields();
+        } else {
+            console.error('❌ All-day checkbox not found during setup!');
+
+            // Debug: List all checkboxes on the page
+            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            console.log('📋 All checkboxes found on page:', allCheckboxes);
+
+            // Debug: Try to find the checkbox by different means
+            setTimeout(() => {
+                console.log('🔍 Delayed search for all-day checkbox...');
+                const delayedCheckbox = document.getElementById('eventAllDay');
+
+                if (delayedCheckbox) {
+                    delayedCheckbox.addEventListener('change', (e) => {
+                        this.toggleAllDayFields();
+                    });
+                }
+            }, 1000);
+        }
+    },
+
+    // Toggle time fields visibility based on all-day checkbox
+    toggleAllDayFields() {
+
+        const allDayCheckbox = document.getElementById('eventAllDay');
+
+        if (!allDayCheckbox) {
+            console.error('❌ All-day checkbox not found!');
+            return;
+        }
+
+        const isAllDay = allDayCheckbox.checked;
+
+        // Find time containers
+        const startTimeContainer = document.getElementById('startTimeContainer');
+        const endTimeContainer = document.getElementById('endTimeContainer');
+
+        // Find time input fields
+        const timeField = document.getElementById('eventTime');
+        const endTimeField = document.getElementById('eventEndTime');
+
+        // Hide/show time containers
+        if (startTimeContainer) {
+            const newDisplay = isAllDay ? 'none' : '';
+            startTimeContainer.style.display = newDisplay;
+        } else {
+            console.warn('⚠️ Start time container not found');
+        }
+
+        if (endTimeContainer) {
+            const newDisplay = isAllDay ? 'none' : '';
+            endTimeContainer.style.display = newDisplay;
+        } else {
+            console.warn('⚠️ End time container not found');
+        }
+
+        // Handle time field requirements
+        if (timeField) {
+            if (isAllDay) {
+                timeField.removeAttribute('required');
+                timeField.value = '';
+            } else {
+                timeField.setAttribute('required', 'required');
+            }
+        } else {
+            console.warn('⚠️ Time field not found');
+        }
+
+        if (endTimeField && isAllDay) {
+            endTimeField.value = '';
+        }
+
+        // Adjust grid layouts
+        const timeContainer = document.getElementById('timeFieldsContainer');
+        const endTimeFieldsContainer = document.getElementById('endTimeFieldsContainer');
+
+        if (timeContainer) {
+            const newClass = isAllDay ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4';
+            timeContainer.className = newClass;
+        } else {
+            console.warn('⚠️ Time fields container not found');
+        }
+
+        if (endTimeFieldsContainer) {
+            const newClass = isAllDay ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4';
+            endTimeFieldsContainer.className = newClass;
+        } else {
+            console.warn('⚠️ End time fields container not found');
+        }
+        
     },
 
     // Setup calendar navigation
@@ -89,26 +190,48 @@ const calendarModule = {
         const eventDescription = document.getElementById('eventDescription').value.trim();
         const eventLocation = document.getElementById('eventLocation').value.trim();
         const eventPrivacy = document.getElementById('eventPrivacy').value;
+        const eventAllDay = document.getElementById('eventAllDay').checked;
 
-        if (!eventTitle || !eventDate || !eventTime) {
+        if (!eventTitle || !eventDate) {
             window.RoommatePortal.utils.showNotification('❌ Please fill in all required fields.');
             return;
         }
 
-        // Create start and end datetime objects using helper function
-        const startDateTime = window.RoommatePortal.utils.createLocalDateTime(eventDate, eventTime);
-        let endDateTime;
+        // Validate time fields for non-all-day events
+        if (!eventAllDay && !eventTime) {
+            window.RoommatePortal.utils.showNotification('❌ Please specify a start time for non-all-day events.');
+            return;
+        }
 
-        if (eventEndDate && eventEndTime) {
-            endDateTime = window.RoommatePortal.utils.createLocalDateTime(eventEndDate, eventEndTime);
+        // Create start and end datetime objects
+        let startDateTime, endDateTime;
+
+        if (eventAllDay) {
+            // For all-day events, set times to start and end of day
+            startDateTime = new Date(eventDate + 'T00:00:00');
+            if (eventEndDate) {
+                endDateTime = new Date(eventEndDate + 'T23:59:59');
+            } else {
+                // Default to same day for all-day events
+                endDateTime = new Date(eventDate + 'T23:59:59');
+            }
         } else {
-            // Default to 1 hour after start time
-            endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+            // Regular timed events
+            startDateTime = window.RoommatePortal.utils.createLocalDateTime(eventDate, eventTime);
+            if (eventEndDate && eventEndTime) {
+                endDateTime = window.RoommatePortal.utils.createLocalDateTime(eventEndDate, eventEndTime);
+            } else {
+                // Default to 1 hour after start time
+                endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+            }
         }
 
         // Validate dates
-        if (endDateTime <= startDateTime) {
+        if (!eventAllDay && endDateTime <= startDateTime) {
             window.RoommatePortal.utils.showNotification('❌ End time must be after start time.');
+            return;
+        } else if (eventAllDay && eventEndDate && new Date(eventEndDate) < new Date(eventDate)) {
+            window.RoommatePortal.utils.showNotification('❌ End date must be on or after start date.');
             return;
         }
 
@@ -130,6 +253,7 @@ const calendarModule = {
                 location: encryptedData.location,
                 startDate: window.RoommatePortal.utils.getLocalDateTimeString(startDateTime),
                 endDate: window.RoommatePortal.utils.getLocalDateTimeString(endDateTime),
+                isAllDay: eventAllDay,
                 privacy: eventPrivacy,
                 createdBy: currentUser.uid,
                 createdByName: currentUser.displayName || currentUser.email,
@@ -347,10 +471,10 @@ const calendarModule = {
                         <div class="calendar-day-number ${isToday ? 'font-bold text-blue-600' : 'text-gray-700'}">${dayNumber}</div>
                         <div class="calendar-day-events">
                             ${displayedSingleDayEvents.map(event => `
-                                <div class="calendar-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'}" 
-                                     title="${event.title}${event.description ? ' - ' + event.description : ''}${event.location ? ' at ' + event.location : ''}"
+                                <div class="calendar-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'} ${event.isAllDay ? 'calendar-event-allday' : ''}" 
+                                     title="${event.title}${event.description ? ' - ' + event.description : ''}${event.location ? ' at ' + event.location : ''}${event.isAllDay ? ' (All day)' : ''}"
                                      data-event-id="${event.id}">
-                                    ${event.privacy === 'private' ? '🔒' : '👥'} ${event.title}
+                                    ${event.privacy === 'private' ? '🔒' : '👥'} ${event.isAllDay ? '📅 ' : ''}${event.title}
                                 </div>
                             `).join('')}
                             ${hasMoreSingleDayEvents ? `<div class="calendar-view-all-btn">+${singleDayEvents.length - maxSingleDayEvents} more...</div>` : ''}
@@ -490,8 +614,8 @@ const calendarModule = {
                 const dayElement = dayElements[i];
                 if (dayElement.date) {
                     const dayDate = new Date(dayElement.date.getFullYear(), dayElement.date.getMonth(), dayElement.date.getDate());
-                    const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
-                    const eventEndDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
+                    const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), event.getDate());
+                    const eventEndDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), event.getDate());
 
                     if (startIndex === -1 && dayDate >= eventStartDate) {
                         startIndex = i;
@@ -665,12 +789,12 @@ const calendarModule = {
         console.log('Calendar: Event positioned at', left + '%', 'width', width + '%', 'top', top + 'px');
 
         // Set content with ellipsis for continuation
-        let displayText = `${event.privacy === 'private' ? '🔒' : '👥'} ${event.title}`;
+        let displayText = `${event.privacy === 'private' ? '🔒' : '👥'} ${event.isAllDay ? '📅 ' : ''}${event.title}`;
         if (showStartEllipsis) displayText = '← ' + displayText;
         if (showEndEllipsis) displayText = displayText + ' →';
 
         spanningEvent.innerHTML = displayText;
-        spanningEvent.title = `${event.title}${event.description ? ' - ' + event.description : ''}`;
+        spanningEvent.title = `${event.title}${event.description ? ' - ' + event.description : ''}${event.location ? ' at ' + event.location : ''}${event.isAllDay ? ' (All day)' : ''}`;
         spanningEvent.dataset.eventId = event.id;
 
         // Add click handler
@@ -723,7 +847,20 @@ const calendarModule = {
                 const spansMultipleDays = startDate.getTime() !== endDate.getTime();
 
                 let timeDisplay;
-                if (spansMultipleDays) {
+                if (event.isAllDay) {
+                    // All-day event display
+                    if (spansMultipleDays) {
+                        const startDateStr = startDateTime.toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric'
+                        });
+                        const endDateStr = endDateTime.toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric'
+                        });
+                        timeDisplay = `<i class="fas fa-calendar text-gray-500 mr-1"></i>All day: ${startDateStr} - ${endDateStr}`;
+                    } else {
+                        timeDisplay = `<i class="fas fa-calendar text-gray-500 mr-1"></i>All day`;
+                    }
+                } else if (spansMultipleDays) {
                     // Show full date and time for multi-day events
                     const startDateStr = startDateTime.toLocaleDateString('en-US', {
                         month: 'short', day: 'numeric'
@@ -807,6 +944,7 @@ const calendarModule = {
             description: event.description || '',
             location: event.location || '',
             privacy: event.privacy,
+            isAllDay: event.isAllDay || false,
             startDate: window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate),
             endDate: window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate)
         };
@@ -912,6 +1050,9 @@ const calendarModule = {
             container.querySelector('input[placeholder*="Location"]') ||
             container.querySelector('input[type="text"]:nth-of-type(2)');
 
+        const allDayField = container.querySelector('#eventAllDay') ||
+            container.querySelector('input[type="checkbox"]');
+
         const privacyField = container.querySelector('#eventPrivacy') ||
             container.querySelector('select');
 
@@ -946,6 +1087,11 @@ const calendarModule = {
         if (locationField) {
             locationField.value = this.editingEventData.location;
         }
+        if (allDayField) {
+            allDayField.checked = this.editingEventData.isAllDay;
+            // Trigger the toggle to show/hide time fields
+            this.toggleAllDayFields();
+        }
         if (privacyField) {
             privacyField.value = this.editingEventData.privacy;
         }
@@ -954,7 +1100,7 @@ const calendarModule = {
             const dateValue = window.RoommatePortal.utils.getLocalDateString(this.editingEventData.startDate);
             dateField.value = dateValue;
         }
-        if (timeField) {
+        if (timeField && !this.editingEventData.isAllDay) {
             const timeValue = window.RoommatePortal.utils.getLocalTimeString(this.editingEventData.startDate);
             timeField.value = timeValue;
         }
@@ -962,7 +1108,7 @@ const calendarModule = {
             const endDateValue = window.RoommatePortal.utils.getLocalDateString(this.editingEventData.endDate);
             endDateField.value = endDateValue;
         }
-        if (endTimeField) {
+        if (endTimeField && !this.editingEventData.isAllDay) {
             const endTimeValue = window.RoommatePortal.utils.getLocalTimeString(this.editingEventData.endDate);
             endTimeField.value = endTimeValue;
         }
@@ -1010,6 +1156,8 @@ const calendarModule = {
 
     // Clear form
     clearForm() {
+        console.log('🧹 Clearing form...');
+
         document.getElementById('eventTitle').value = '';
         document.getElementById('eventDescription').value = '';
         document.getElementById('eventLocation').value = '';
@@ -1018,6 +1166,16 @@ const calendarModule = {
         document.getElementById('eventEndDate').value = '';
         document.getElementById('eventEndTime').value = '';
         document.getElementById('eventPrivacy').value = 'shared';
+
+        const allDayCheckbox = document.getElementById('eventAllDay');
+        if (allDayCheckbox) {
+            console.log('📋 Unchecking all-day checkbox');
+            allDayCheckbox.checked = false;
+        }
+
+        // Reset time fields visibility
+        console.log('🔄 Calling toggleAllDayFields from clearForm');
+        this.toggleAllDayFields();
 
         // Remove editing state
         const form = document.getElementById('addEventForm');
@@ -1030,6 +1188,8 @@ const calendarModule = {
 
         // Reset button text to "Add Event"
         this.updateFormButtonText(document, false);
+
+        console.log('✅ Form cleared');
     },
 
     // Update calendar statistics
@@ -1167,6 +1327,70 @@ const calendarModule = {
     // Delete all events for a household (called when household is deleted)
     async deleteAllHouseholdEvents(householdId) {
         return await window.RoommatePortal.dataCleanup.deleteAllHouseholdEvents(householdId);
+    },
+
+    // Debug function - call this from browser console to test
+    debugAllDayToggle() {
+        console.log('🐛 DEBUG: All-day toggle inspection');
+
+        // Check if elements exist
+        const allDayCheckbox = document.getElementById('eventAllDay');
+        const startTimeContainer = document.getElementById('startTimeContainer');
+        const endTimeContainer = document.getElementById('endTimeContainer');
+        const timeField = document.getElementById('eventTime');
+        const endTimeField = document.getElementById('eventEndTime');
+        const timeContainer = document.getElementById('timeFieldsContainer');
+        const endTimeFieldsContainer = document.getElementById('endTimeFieldsContainer');
+
+        console.log('📋 All-day checkbox:', allDayCheckbox);
+        console.log('🕐 Start time container:', startTimeContainer);
+        console.log('🕐 End time container:', endTimeContainer);
+        console.log('⏰ Time field:', timeField);
+        console.log('⏰ End time field:', endTimeField);
+        console.log('📦 Time fields container:', timeContainer);
+        console.log('📦 End time fields container:', endTimeFieldsContainer);
+
+        if (allDayCheckbox) {
+            console.log('✅ Checkbox current state:', allDayCheckbox.checked);
+            console.log('🔄 Manually toggling checkbox...');
+            allDayCheckbox.checked = !allDayCheckbox.checked;
+            console.log('✅ Checkbox new state:', allDayCheckbox.checked);
+
+            // Manually trigger the toggle
+            this.toggleAllDayFields();
+        }
+
+        // Check current styles
+        if (startTimeContainer) {
+            console.log('🎨 Start container styles:', {
+                display: startTimeContainer.style.display,
+                computed: window.getComputedStyle(startTimeContainer).display
+            });
+        }
+
+        if (endTimeContainer) {
+            console.log('🎨 End container styles:', {
+                display: endTimeContainer.style.display,
+                computed: window.getComputedStyle(endTimeContainer).display
+            });
+        }
+
+        // List all form elements
+        const form = document.getElementById('addEventForm');
+        if (form) {
+            const formElements = form.querySelectorAll('input, textarea, select');
+            console.log('📝 All form elements:', formElements);
+        }
+
+        return {
+            allDayCheckbox,
+            startTimeContainer,
+            endTimeContainer,
+            timeField,
+            endTimeField,
+            timeContainer,
+            endTimeFieldsContainer
+        };
     },
 
     // Update form button text based on editing state

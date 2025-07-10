@@ -455,6 +455,23 @@ header {
     border: 1px solid #e9d5ff;
 }
 
+.calendar-event-allday {
+    font-weight: bold;
+    border-left: 4px solid #3b82f6;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-event-allday.calendar-event-shared {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.calendar-event-allday.calendar-event-private {
+    border-left-color: #8b5cf6;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+}
+
 /* Spanning Events */
 .calendar-spanning-event {
     font-size: 12px;
@@ -498,6 +515,22 @@ header {
     border: 1px solid #e9d5ff;
     border-left: 3px solid #8b5cf6;
     /* Emphasize left border */
+}
+
+/* All-day spanning events */
+.calendar-spanning-event.calendar-event-allday {
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-spanning-event.calendar-event-allday.calendar-event-shared {
+    border-left: 4px solid #10b981;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.calendar-spanning-event.calendar-event-allday.calendar-event-private {
+    border-left: 4px solid #8b5cf6;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
 }
 
 /* Multi-day event specific styling */

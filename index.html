@@ -466,14 +466,20 @@
                     class="px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-indigo-500 focus:outline-none transition-colors"
                     placeholder="Location (optional)">
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="flex items-center mb-4">
+                    <input type="checkbox" id="eventAllDay"
+                        class="mr-3 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="eventAllDay" class="text-gray-700 text-sm font-medium">All-day event</label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4" id="timeFieldsContainer">
                     <div>
                         <label for="eventDate" class="text-gray-700 text-sm font-medium">Start Date *</label>
                         <input type="date" id="eventDate" data-field="start-date"
                             class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-indigo-500 focus:outline-none transition-colors"
                             required>
                     </div>
-                    <div>
+                    <div id="startTimeContainer">
                         <label for="eventTime" class="text-gray-700 text-sm font-medium">Start Time *</label>
                         <input type="time" id="eventTime" data-field="start-time"
                             class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-indigo-500 focus:outline-none transition-colors"
@@ -481,13 +487,13 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-4" id="endTimeFieldsContainer">
                     <div>
                         <label for="eventEndDate" class="text-gray-700 text-sm font-medium">End Date</label>
                         <input type="date" id="eventEndDate" data-field="end-date"
                             class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-indigo-500 focus:outline-none transition-colors">
                     </div>
-                    <div>
+                    <div id="endTimeContainer">
                         <label for="eventEndTime" class="text-gray-700 text-sm font-medium">End Time</label>
                         <input type="time" id="eventEndTime" data-field="end-time"
                             class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white focus:border-indigo-500 focus:outline-none transition-colors">
