@@ -168,22 +168,10 @@ const householdManagement = {
     async deleteUserAccount() {
         const currentUser = window.RoommatePortal.state.getCurrentUser();
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
-        const { db, auth } = window.RoommatePortal.config;
-
-        if (!auth) {
-            window.RoommatePortal.utils.showNotification('❌ Authentication service not available.');
-            return;
-        }
+        const { db } = window.RoommatePortal.config;
 
         if (!currentUser) {
             window.RoommatePortal.utils.showNotification('❌ No user is currently signed in.');
-            return;
-        }
-
-        // Get the actual Firebase Auth user object
-        const firebaseUser = auth.currentUser;
-        if (!firebaseUser) {
-            window.RoommatePortal.utils.showNotification('❌ No authenticated user found.');
             return;
         }
 
@@ -250,20 +238,7 @@ const householdManagement = {
                 }
 
                 // Delete the Firebase Auth user account
-                try {
-                    await firebaseUser.delete();
-                } catch (authDeleteError) {
-                    console.error('Error deleting Firebase Auth user:', authDeleteError);
-
-                    // Check if it's a recent authentication required error
-                    if (authDeleteError.code === 'auth/requires-recent-login') {
-                        window.RoommatePortal.utils.showNotification('❌ Account deletion requires recent login. Please sign out, sign back in, and try again.');
-                        return;
-                    } else {
-                        window.RoommatePortal.utils.showNotification('❌ Failed to delete account: ' + authDeleteError.message);
-                        return;
-                    }
-                }
+                await currentUser.delete();
 
                 // Clear local state
                 window.RoommatePortal.state.setCurrentUser(null);
@@ -391,16 +366,10 @@ const householdManagement = {
     async updateUserName(newName) {
         const currentUser = window.RoommatePortal.state.getCurrentUser();
         const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
-        const { db, auth } = window.RoommatePortal.config;
+        const { db } = window.RoommatePortal.config;
 
         if (!currentUser || !currentHousehold) {
             throw new Error('User must be logged in and part of a household');
-        }
-
-        // Get the actual Firebase Auth user object
-        const firebaseUser = auth.currentUser;
-        if (!firebaseUser) {
-            throw new Error('No authenticated user found');
         }
 
         const oldName = currentUser.displayName;
@@ -408,26 +377,14 @@ const householdManagement = {
 
         try {
             // 1. Update Firebase Auth profile
-            await firebaseUser.updateProfile({
+            await currentUser.updateProfile({
                 displayName: newName
             });
 
-            // 2. Update user document in Firestore with encrypted data
-            const encryptionKey = await window.RoommatePortal.encryption.getOrCreateHouseholdKey();
-            const encryptedUserData = await window.RoommatePortal.encryption.encryptDataWithKey({
+            // 2. Update user document in Firestore
+            await db.collection('users').doc(userId).update({
                 displayName: newName
-            }, ['displayName'], encryptionKey);
-
-            const userData = {
-                displayName: encryptedUserData.displayName
-            };
-
-            // Add encryption flag if field was encrypted
-            if (encryptedUserData.displayName_encrypted) {
-                userData.displayName_encrypted = encryptedUserData.displayName_encrypted;
-            }
-
-            await db.collection('users').doc(userId).update(userData);
+            });
 
             // 3. Update household member details
             await db.collection('households').doc(currentHousehold.id).update({
