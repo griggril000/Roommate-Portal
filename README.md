@@ -135,26 +135,34 @@ js/
 - **Responsive Design**: Works on desktop and mobile
 - **Real-time Updates**: No page refresh needed
 - **Intuitive Interface**: Clean, modern UI with clear navigation
-- **Keyboard Shortcuts**: Ctrl/Cmd + Enter to submit forms
 - **Visual Feedback**: Toast notifications for all actions
 - **Animated Interactions**: Smooth transitions and loading states
 
 ### 🎤 Voice Commands
-- **Voice Input**: Add chores, messages, and announcements using voice
-- **Mobile Optimized**: Specially designed for mobile devices
+- **Unified Voice Interface**: Single voice button on dashboard for natural language commands
+- **Section-Specific Voice**: Voice buttons in each section with contextual help
+- **Smart Context Detection**: Automatically determines content type from speech
+- **Mobile Optimized**: Specially designed for mobile devices with permission handling
 - **Smart Processing**: Automatically formats voice input appropriately
 - **Browser Support**: Works in Chrome, Safari, Edge, and other modern browsers
 - **Permission Management**: Handles microphone permissions gracefully
+- **Help Integration**: Context-specific help buttons next to each voice input
 
 #### Voice Command Examples:
+**Dashboard (Unified Voice):**
+- **Natural Language**: "Announce football next week", "Add chore clean bathroom"
+- **Smart Detection**: Automatically creates the right content type
+
+**Section-Specific Commands:**
 - **Chores**: "Clean the bathroom", "Vacuum living room", "Take out trash"
 - **Messages**: "Pizza party tonight at seven", "Please keep kitchen clean"
 - **Announcements**: "Rent due on the fifteenth", "House meeting this Sunday"
 - **Assignments**: Say roommate names to assign chores
 
 #### How to Use:
-1. Click the microphone button next to any input field
-2. Allow microphone access when prompted
-3. Speak clearly when the button turns red
-4. Review the text and submit as normal
-5. **Keyboard shortcut**: Press `Ctrl+Shift+V` (or `Cmd+Shift+V` on Mac) while focused on any input field
+1. **Dashboard**: Click the floating voice button and speak naturally
+2. **Sections**: Click the "Voice" button next to "Add" buttons for contextual input
+3. **Help**: Click the "?" button next to voice buttons for examples and tips
+4. Allow microphone access when prompted
+5. Speak clearly when the button turns red
+6. Review the text and submit as normal
