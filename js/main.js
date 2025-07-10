@@ -506,10 +506,14 @@ const appModule = {
             if (container && (container.querySelector('label') || container.querySelector('input[type="time"]'))) {
                 timeContainers.push(container);
             }
-        });
+        });        // Also look for the grid containers that need class adjustments
+        // Find all grid containers, but exclude the main form container
+        const gridContainers = modalForm.querySelectorAll('.grid');
 
-        // Also look for the grid containers that need class adjustments
-        const gridContainers = modalForm.querySelectorAll('.grid.grid-cols-2');
+        // Filter to only get containers that have grid-cols classes and are NOT the main form container
+        const relevantGridContainers = Array.from(gridContainers).filter(container => {
+            return container.className.includes('grid-cols-') && !container.classList.contains('form-container');
+        });
 
         if (isAllDay) {
             // Hide time containers and remove required attribute from time fields
@@ -523,7 +527,7 @@ const appModule = {
             });
 
             // Adjust grid layouts to single column
-            gridContainers.forEach((gridContainer) => {
+            relevantGridContainers.forEach((gridContainer) => {
                 gridContainer.className = 'grid grid-cols-1 gap-4';
             });
         } else {
@@ -540,7 +544,7 @@ const appModule = {
             });
 
             // Restore grid layouts to two columns
-            gridContainers.forEach((gridContainer) => {
+            relevantGridContainers.forEach((gridContainer) => {
                 gridContainer.className = 'grid grid-cols-2 gap-4';
             });
         }
@@ -630,15 +634,35 @@ const appModule = {
 
     // Remove IDs from cloned elements to avoid conflicts
     removeIdsFromClone(element) {
-        // Remove ID from the element itself
+        // Create a mapping of old IDs to new unique IDs
+        const idMap = new Map();
+        const generateUniqueId = (oldId) => {
+            const newId = `cloned_${oldId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            idMap.set(oldId, newId);
+            return newId;
+        };
+
+        // Update IDs and create mapping
         if (element.id) {
-            element.removeAttribute('id');
+            const newId = generateUniqueId(element.id);
+            element.id = newId;
         }
 
-        // Remove IDs from all child elements
         const elementsWithIds = element.querySelectorAll('[id]');
         elementsWithIds.forEach(el => {
-            el.removeAttribute('id');
+            if (el.id) {
+                const newId = generateUniqueId(el.id);
+                el.id = newId;
+            }
+        });
+
+        // Update all 'for' attributes to match the new IDs
+        const labelsWithFor = element.querySelectorAll('label[for]');
+        labelsWithFor.forEach(label => {
+            const forValue = label.getAttribute('for');
+            if (idMap.has(forValue)) {
+                label.setAttribute('for', idMap.get(forValue));
+            }
         });
     },
 };
