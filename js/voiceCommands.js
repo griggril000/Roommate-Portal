@@ -104,11 +104,18 @@ const voiceCommandsModule = {
         voiceButton.id = 'unifiedVoiceButton';
         voiceButton.className = 'fixed bottom-4 right-4 w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg flex items-center justify-center z-50 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-110';
         voiceButton.innerHTML = '<i class="fas fa-microphone text-xl"></i>';
-        voiceButton.title = 'Voice Commands Help - Click to see commands for this page';
+        voiceButton.title = 'Voice Commands - Click to speak or get help';
 
-        // Add click handler - now opens contextual help instead of starting voice input
+        // Add click handler - shows help on first use, then directly activates voice
         voiceButton.addEventListener('click', () => {
-            this.showContextualVoiceHelp();
+            const hasSeenIntro = localStorage.getItem('voiceCommandsIntroSeen');
+            if (hasSeenIntro) {
+                // User has seen intro before - directly start voice command
+                this.startUnifiedVoiceInput();
+            } else {
+                // First time user - show contextual help
+                this.showContextualVoiceHelp();
+            }
         });
 
         // Add to page
@@ -120,7 +127,7 @@ const voiceCommandsModule = {
         // Show on all pages now that it's contextual help
         this.voiceButton.style.display = 'flex';
 
-        console.log('🎤 Contextual voice help button created');
+        console.log('🎤 Smart voice button created - shows help first time, then direct voice input');
     },
 
     // Update voice button visibility based on current tab (now always visible for contextual help)
