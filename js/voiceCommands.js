@@ -99,162 +99,57 @@ const voiceCommandsModule = {
 
     // Create unified voice command button
     createUnifiedVoiceButton() {
-        // Create floating voice command button (only on dashboard and if supported)
+        // Create floating voice command button that shows contextual help
         const voiceButton = document.createElement('button');
         voiceButton.id = 'unifiedVoiceButton';
         voiceButton.className = 'fixed bottom-4 right-4 w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg flex items-center justify-center z-50 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-110';
         voiceButton.innerHTML = '<i class="fas fa-microphone text-xl"></i>';
-        voiceButton.title = 'Voice Commands - Say things like "announce football next week" or "add chore clean bathroom"';
+        voiceButton.title = 'Voice Commands Help - Click to see commands for this page';
 
-        // Add click handler
+        // Add click handler - now opens contextual help instead of starting voice input
         voiceButton.addEventListener('click', () => {
-            this.startUnifiedVoiceInput();
+            this.showContextualVoiceHelp();
         });
 
         // Add to page
         document.body.appendChild(voiceButton);
 
-        // Update button appearance based on listening state
+        // Store reference
         this.voiceButton = voiceButton;
 
-        // Hide by default, show only on dashboard
-        this.updateVoiceButtonVisibility('dashboard');
+        // Show on all pages now that it's contextual help
+        this.voiceButton.style.display = 'flex';
 
-        console.log('🎤 Unified voice button created');
+        console.log('🎤 Contextual voice help button created');
     },
 
-    // Update voice button visibility based on current tab
+    // Update voice button visibility based on current tab (now always visible for contextual help)
     updateVoiceButtonVisibility(currentTab) {
         if (!this.voiceButton) return;
 
-        // Only show voice button on dashboard to avoid conflicts with section FABs
-        if (currentTab === 'dashboard') {
-            this.voiceButton.style.display = 'flex';
-        } else {
-            this.voiceButton.style.display = 'none';
-        }
+        // Voice button now always visible since it shows contextual help
+        this.voiceButton.style.display = 'flex';
     },
 
-    // Add voice buttons to modal forms (for FAB system)
+    // Add voice buttons to modal forms (disabled - using unified voice FAB only)
     addVoiceButtonsToModals() {
-        // Observer to watch for new modals
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === 1 && node.classList?.contains('input-modal')) {
-                        // Modal added, add voice buttons to its inputs
-                        setTimeout(() => {
-                            this.addVoiceButtonsToModalInputs(node);
-                        }, 100);
-                    }
-                });
-            });
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+        // Voice buttons disabled - users can use the unified voice FAB for help
+        // and voice commands work through the "Try Voice Command" button
+        console.log('🎤 Individual voice buttons disabled - using unified voice FAB');
     },
 
-    // Add voice buttons to inputs within a modal
+    // Add voice buttons to inputs within a modal (disabled)
     addVoiceButtonsToModalInputs(modal) {
-        if (!this.isSupported) return;
-
-        const inputs = modal.querySelectorAll('input[type="text"], textarea');
-        inputs.forEach((input) => {
-            if (!input.id) {
-                input.id = 'voice-input-' + Date.now() + Math.random().toString(36).substr(2, 9);
-            }
-
-            // Don't add voice button if already has one
-            if (input.parentNode.querySelector('.voice-button')) return;
-
-            let tooltip = 'Add by voice';
-            if (input.placeholder) {
-                tooltip = `Add ${input.placeholder.toLowerCase()} by voice`;
-            }
-
-            this.addVoiceButtonToInput(input.id, tooltip);
-        });
+        // Individual voice buttons disabled - using unified voice FAB only
+        console.log('🎤 Individual voice input buttons disabled');
+        return;
     },
 
-    // Add voice button to specific input field
+    // Add voice button to specific input field (disabled)
     addVoiceButtonToInput(inputId, tooltip) {
-        const input = document.getElementById(inputId);
-        if (!input || !this.isSupported) return;
-
-        // Check if voice button already exists
-        if (input.parentNode.querySelector('.voice-button')) {
-            console.log(`Voice button already exists for ${inputId}`);
-            return;
-        }
-
-        // Create voice button container
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'voice-button-container';
-        buttonContainer.style.cssText = `
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        `;
-
-        // Create voice button
-        const voiceButton = document.createElement('button');
-        voiceButton.type = 'button';
-        voiceButton.className = 'voice-button';
-        voiceButton.title = tooltip;
-        voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
-        voiceButton.style.cssText = `
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s ease;
-            z-index: 10;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        `;
-
-        // Add hover effects
-        voiceButton.addEventListener('mouseenter', () => {
-            voiceButton.style.background = '#2563eb';
-            voiceButton.style.transform = 'translateY(-50%) scale(1.05)';
-        });
-
-        voiceButton.addEventListener('mouseleave', () => {
-            if (!this.isListening || this.activeInput !== input) {
-                voiceButton.style.background = '#3b82f6';
-                voiceButton.style.transform = 'translateY(-50%) scale(1)';
-            }
-        });
-
-        // Add click handler
-        voiceButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.toggleVoiceInput(input, voiceButton);
-        });
-
-        // Wrap input with container and add button
-        const parent = input.parentNode;
-        parent.insertBefore(buttonContainer, input);
-        buttonContainer.appendChild(input);
-        buttonContainer.appendChild(voiceButton);
-
-        // Adjust input padding to make room for button
-        input.style.paddingRight = '48px';
-
-        console.log(`✅ Voice button added to ${inputId}`);
+        // Individual voice buttons disabled - using unified voice FAB only
+        console.log(`🎤 Voice button creation disabled for ${inputId} - using unified voice FAB`);
+        return;
     },
 
     // Toggle voice input for specific field
@@ -679,32 +574,262 @@ const voiceCommandsModule = {
         document.body.appendChild(helpModal);
     },
 
-    // Retry adding voice buttons to forms (useful when tabs are switched)
-    retryAddingVoiceButtons() {
-        if (!this.isSupported) return;
+    // Show contextual voice commands help based on current page
+    showContextualVoiceHelp() {
+        // Determine current context based on active tab
+        const currentContext = this.getCurrentPageContext();
+        console.log(`🎤 Showing contextual help for: ${currentContext}`);
 
-        // Try to add buttons to any inputs that don't have them yet
-        const targetInputs = [
-            'choreInput',
-            'messageInput',
-            'announcementBodyInput',
-            'announcementTitleInput',
-            'choreAssignee'
-        ];
+        const helpModal = document.createElement('div');
+        helpModal.className = 'fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50 p-4';
 
-        targetInputs.forEach(inputId => {
-            const input = document.getElementById(inputId);
-            if (input && !input.parentNode.querySelector('.voice-button')) {
-                const tooltips = {
-                    'choreInput': 'Add chore by voice',
-                    'messageInput': 'Add message by voice',
-                    'announcementBodyInput': 'Add announcement by voice',
-                    'announcementTitleInput': 'Add title by voice',
-                    'choreAssignee': 'Set assignee by voice'
-                };
-                this.addVoiceButtonToInput(inputId, tooltips[inputId]);
+        const contextContent = this.getContextualHelpContent(currentContext);
+        console.log(`🎤 Context content title: ${contextContent.title}`);
+
+        helpModal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">🎤 Voice Commands - ${contextContent.title}</h2>
+                    <button class="text-gray-500 hover:text-gray-700" onclick="this.closest('.fixed').remove()">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    ${contextContent.content}
+                    
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-1">🎯 How to Use</h4>
+                        <p class="text-xs text-blue-700 mb-2">Use voice commands in two ways:</p>
+                        <ul class="text-xs text-blue-700 space-y-1">
+                            <li>• Click "Try Voice Command" below to speak directly</li>
+                            <li>• Say natural commands like the examples above</li>
+                            <li>• Voice will automatically create the right content type</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <button 
+                            id="tryVoiceCommand"
+                            class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-colors mr-2"
+                        >
+                            Try Voice Command
+                        </button>
+                        <button 
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            onclick="this.closest('.fixed').remove()"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(helpModal);
+
+        // Add event listener for the "Try Voice Command" button
+        const tryVoiceBtn = helpModal.querySelector('#tryVoiceCommand');
+        if (tryVoiceBtn) {
+            tryVoiceBtn.addEventListener('click', () => {
+                helpModal.remove();
+                this.startUnifiedVoiceInput();
+            });
+        }
+    },
+
+    // Get current page context
+    getCurrentPageContext() {
+        // Check which section is currently visible
+        const sections = ['dashboard', 'chores', 'messages', 'announcements', 'calendar'];
+
+        for (const section of sections) {
+            const sectionElement = document.getElementById(section);
+            if (sectionElement && !sectionElement.classList.contains('hidden')) {
+                console.log(`🎤 Current page context detected: ${section}`);
+                return section;
             }
-        });
+        }
+
+        console.log('🎤 No specific context found, defaulting to dashboard');
+        return 'dashboard'; // Default fallback
+    },
+
+    // Get contextual help content based on current page
+    getContextualHelpContent(context) {
+        const contentMap = {
+            dashboard: {
+                title: 'Dashboard',
+                content: `
+                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
+                        <p class="text-sm text-gray-700 text-center font-medium">
+                            🎯 <strong>Quick Commands from Dashboard</strong><br>
+                            Speak naturally to create anything instantly
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-orange-600 mb-2">📢 Announcements</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• "Announce football next week"</li>
+                            <li>• "Announcement rent due Friday"</li>
+                            <li>• "Post announcement house meeting Sunday"</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-blue-600 mb-2">🧹 Chores</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• "Add chore clean the bathroom"</li>
+                            <li>• "Chore vacuum living room"</li>
+                            <li>• "Create chore take out trash"</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-green-600 mb-2">💬 Messages</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• "Message pizza party tonight"</li>
+                            <li>• "Tell everyone movie at 8pm"</li>
+                            <li>• "Post message please clean kitchen"</li>
+                        </ul>
+                    </div>
+                `
+            },
+            chores: {
+                title: 'Chores',
+                content: `
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200">
+                        <p class="text-sm text-gray-700 text-center font-medium">
+                            🧹 <strong>Chore Voice Commands</strong><br>
+                            Create chores quickly with voice
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-blue-600 mb-2">🎯 Chore Examples</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• "Add chore clean the bathroom"</li>
+                            <li>• "Chore vacuum living room"</li>
+                            <li>• "Create chore wash dishes"</li>
+                            <li>• "Assign take out trash to John"</li>
+                            <li>• "Chore organize kitchen cabinets"</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-3 rounded-lg">
+                        <h4 class="font-semibold text-yellow-800 mb-1">💡 Smart Tips</h4>
+                        <ul class="text-xs text-yellow-700 space-y-1">
+                            <li>• System adds action words automatically (clean, wash, take out)</li>
+                            <li>• Include assignee name for automatic assignment</li>
+                            <li>• Say room names for location context</li>
+                        </ul>
+                    </div>
+                `
+            },
+            messages: {
+                title: 'Messages',
+                content: `
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 p-3 rounded-lg border border-green-200">
+                        <p class="text-sm text-gray-700 text-center font-medium">
+                            💬 <strong>Message Voice Commands</strong><br>
+                            Post messages instantly by voice
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-green-600 mb-2">🎯 Message Examples</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• "Message pizza party tonight"</li>
+                            <li>• "Tell everyone movie at 8pm"</li>
+                            <li>• "Post message please clean kitchen"</li>
+                            <li>• "Message parking lot will be paved tomorrow"</li>
+                            <li>• "Tell roommates WiFi password changed"</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-green-50 p-3 rounded-lg">
+                        <h4 class="font-semibold text-green-800 mb-1">💡 Quick Tips</h4>
+                        <ul class="text-xs text-green-700 space-y-1">
+                            <li>• Start with "message" or "tell everyone"</li>
+                            <li>• Casual language works perfectly</li>
+                            <li>• Messages are encrypted automatically</li>
+                        </ul>
+                    </div>
+                `
+            },
+            announcements: {
+                title: 'Announcements',
+                content: `
+                    <div class="bg-gradient-to-r from-orange-50 to-orange-100 p-3 rounded-lg border border-orange-200">
+                        <p class="text-sm text-gray-700 text-center font-medium">
+                            📢 <strong>Announcement Voice Commands</strong><br>
+                            Create important announcements by voice
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-orange-600 mb-2">🎯 Announcement Examples</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• "Announce football next week"</li>
+                            <li>• "Announcement rent due Friday"</li>
+                            <li>• "Post announcement house meeting Sunday"</li>
+                            <li>• "Announce maintenance visit Thursday morning"</li>
+                            <li>• "Announcement fire drill practice tomorrow"</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-orange-50 p-3 rounded-lg">
+                        <h4 class="font-semibold text-orange-800 mb-1">💡 Best Practices</h4>
+                        <ul class="text-xs text-orange-700 space-y-1">
+                            <li>• Start with "announce" or "announcement"</li>
+                            <li>• Include dates/times for clarity</li>
+                            <li>• Keep important info brief and clear</li>
+                        </ul>
+                    </div>
+                `
+            },
+            calendar: {
+                title: 'Calendar',
+                content: `
+                    <div class="bg-gradient-to-r from-indigo-50 to-indigo-100 p-3 rounded-lg border border-indigo-200">
+                        <p class="text-sm text-gray-700 text-center font-medium">
+                            📅 <strong>Calendar Voice Commands</strong><br>
+                            Add events quickly by voice
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-indigo-600 mb-2">🎯 Event Examples</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• "Add event party Saturday"</li>
+                            <li>• "Event house meeting Sunday 7pm"</li>
+                            <li>• "Create event movie night Friday"</li>
+                            <li>• "Add event cleaning day next Saturday"</li>
+                            <li>• "Event game night Thursday evening"</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-indigo-50 p-3 rounded-lg">
+                        <h4 class="font-semibold text-indigo-800 mb-1">💡 Event Tips</h4>
+                        <ul class="text-xs text-indigo-700 space-y-1">
+                            <li>• Include day/time for automatic scheduling</li>
+                            <li>• Use "next [day]" for future weeks</li>
+                            <li>• Events auto-cleanup after 90 days</li>
+                        </ul>
+                    </div>
+                `
+            }
+        };
+
+        return contentMap[context] || contentMap.dashboard;
+    },
+
+    // Retry adding voice buttons to forms (disabled - using unified voice FAB only)
+    retryAddingVoiceButtons() {
+        // Individual voice buttons disabled - using unified voice FAB only
+        console.log('🎤 Individual voice button retry disabled - using unified voice FAB');
+        return;
     },
 
     // Listen for tab switches to add voice buttons to newly visible forms

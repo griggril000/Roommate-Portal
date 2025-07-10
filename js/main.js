@@ -134,11 +134,8 @@ const appModule = {
         const addAnnouncementBtn = document.getElementById('addAnnouncementBtn');
         const addEventBtn = document.getElementById('addEventBtn');
 
-        // Voice buttons for each section
-        const voiceChoreBtn = document.getElementById('voiceChoreBtn');
-        const voiceMessageBtn = document.getElementById('voiceMessageBtn');
-        const voiceAnnouncementBtn = document.getElementById('voiceAnnouncementBtn');
-        const voiceEventBtn = document.getElementById('voiceEventBtn');
+        // Voice buttons for each section - removed as requested by user
+        // Individual voice buttons replaced with contextual voice FAB
 
         // Back to dashboard from chores
         if (backToDashboardFromChores) {
@@ -205,60 +202,7 @@ const appModule = {
             });
         }
 
-        // Voice buttons - trigger context-specific voice input
-        if (voiceChoreBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceChoreBtn.addEventListener('click', () => {
-                this.startContextualVoiceInput('chore');
-            });
-        }
-
-        if (voiceMessageBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceMessageBtn.addEventListener('click', () => {
-                this.startContextualVoiceInput('message');
-            });
-        }
-
-        if (voiceAnnouncementBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceAnnouncementBtn.addEventListener('click', () => {
-                this.startContextualVoiceInput('announcement');
-            });
-        }
-
-        if (voiceEventBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceEventBtn.addEventListener('click', () => {
-                this.startContextualVoiceInput('event');
-            });
-        }
-
-        // Voice help buttons
-        const voiceChoreHelpBtn = document.getElementById('voiceChoreHelpBtn');
-        const voiceMessageHelpBtn = document.getElementById('voiceMessageHelpBtn');
-        const voiceAnnouncementHelpBtn = document.getElementById('voiceAnnouncementHelpBtn');
-        const voiceEventHelpBtn = document.getElementById('voiceEventHelpBtn');
-
-        if (voiceChoreHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceChoreHelpBtn.addEventListener('click', () => {
-                this.showContextualVoiceHelp('chore');
-            });
-        }
-
-        if (voiceMessageHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceMessageHelpBtn.addEventListener('click', () => {
-                this.showContextualVoiceHelp('message');
-            });
-        }
-
-        if (voiceAnnouncementHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceAnnouncementHelpBtn.addEventListener('click', () => {
-                this.showContextualVoiceHelp('announcement');
-            });
-        }
-
-        if (voiceEventHelpBtn && window.RoommatePortal.voiceCommands?.isSupported) {
-            voiceEventHelpBtn.addEventListener('click', () => {
-                this.showContextualVoiceHelp('event');
-            });
-        }
+        // Voice buttons - replaced with contextual voice FAB
 
         // Hide voice buttons if not supported
         if (!window.RoommatePortal.voiceCommands?.isSupported) {
