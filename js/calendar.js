@@ -87,6 +87,7 @@ const calendarModule = {
         const eventEndDate = document.getElementById('eventEndDate').value;
         const eventEndTime = document.getElementById('eventEndTime').value;
         const eventDescription = document.getElementById('eventDescription').value.trim();
+        const eventLocation = document.getElementById('eventLocation').value.trim();
         const eventPrivacy = document.getElementById('eventPrivacy').value;
 
         if (!eventTitle || !eventDate || !eventTime) {
@@ -119,12 +120,14 @@ const calendarModule = {
             // Encrypt sensitive event data
             const encryptedData = await window.RoommatePortal.encryption.encryptSensitiveData({
                 title: eventTitle,
-                description: eventDescription
-            }, ['title', 'description']);
+                description: eventDescription,
+                location: eventLocation
+            }, ['title', 'description', 'location']);
 
             const eventData = {
                 title: encryptedData.title,
                 description: encryptedData.description,
+                location: encryptedData.location,
                 startDate: window.RoommatePortal.utils.getLocalDateTimeString(startDateTime),
                 endDate: window.RoommatePortal.utils.getLocalDateTimeString(endDateTime),
                 privacy: eventPrivacy,
@@ -139,6 +142,9 @@ const calendarModule = {
             }
             if (encryptedData.description_encrypted) {
                 eventData.description_encrypted = encryptedData.description_encrypted;
+            }
+            if (encryptedData.location_encrypted) {
+                eventData.location_encrypted = encryptedData.location_encrypted;
             }
 
             if (editingEventId) {
@@ -235,7 +241,7 @@ const calendarModule = {
 
             // Decrypt event data
             try {
-                this.events = await window.RoommatePortal.encryption.decryptDataArray(eventsList, ['title', 'description']);
+                this.events = await window.RoommatePortal.encryption.decryptDataArray(eventsList, ['title', 'description', 'location']);
             } catch (error) {
                 console.error('Error decrypting events:', error);
                 this.events = eventsList; // Use original data if decryption fails
@@ -342,7 +348,7 @@ const calendarModule = {
                         <div class="calendar-day-events">
                             ${displayedSingleDayEvents.map(event => `
                                 <div class="calendar-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'}" 
-                                     title="${event.title}${event.description ? ' - ' + event.description : ''}"
+                                     title="${event.title}${event.description ? ' - ' + event.description : ''}${event.location ? ' at ' + event.location : ''}"
                                      data-event-id="${event.id}">
                                     ${event.privacy === 'private' ? '🔒' : '👥'} ${event.title}
                                 </div>
@@ -750,6 +756,7 @@ const calendarModule = {
                         </div>
                     </div>
                     <p class="text-gray-600 mb-2">${timeDisplay}</p>
+                    ${event.location ? `<p class="text-gray-600 mb-2"><i class="fas fa-map-marker-alt text-gray-500 mr-1"></i>${window.RoommatePortal.utils.escapeHtml(event.location)}</p>` : ''}
                     ${event.description ? `<p class="text-gray-700">${window.RoommatePortal.utils.escapeHtml(event.description)}</p>` : ''}
                     <p class="text-sm text-gray-500 mt-2">Created by: ${window.RoommatePortal.utils.escapeHtml(event.createdByName)}</p>
                 `;
@@ -798,6 +805,7 @@ const calendarModule = {
             id: eventId,
             title: event.title,
             description: event.description || '',
+            location: event.location || '',
             privacy: event.privacy,
             startDate: window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate),
             endDate: window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate)
@@ -900,6 +908,10 @@ const calendarModule = {
             container.querySelector('textarea[placeholder*="Event description"]') ||
             container.querySelector('textarea');
 
+        const locationField = container.querySelector('#eventLocation') ||
+            container.querySelector('input[placeholder*="Location"]') ||
+            container.querySelector('input[type="text"]:nth-of-type(2)');
+
         const privacyField = container.querySelector('#eventPrivacy') ||
             container.querySelector('select');
 
@@ -930,6 +942,9 @@ const calendarModule = {
         }
         if (descriptionField) {
             descriptionField.value = this.editingEventData.description;
+        }
+        if (locationField) {
+            locationField.value = this.editingEventData.location;
         }
         if (privacyField) {
             privacyField.value = this.editingEventData.privacy;
@@ -997,6 +1012,7 @@ const calendarModule = {
     clearForm() {
         document.getElementById('eventTitle').value = '';
         document.getElementById('eventDescription').value = '';
+        document.getElementById('eventLocation').value = '';
         document.getElementById('eventDate').value = '';
         document.getElementById('eventTime').value = '';
         document.getElementById('eventEndDate').value = '';
