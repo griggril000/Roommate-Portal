@@ -69,7 +69,6 @@ const messagesModule = {
                     author: author,
                     text: encryptedMessage.text,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    householdId: currentHousehold.id,
                     authorId: currentUser.uid,
                     // Track which users have read this message (author has read it by default)
                     readBy: [currentUser.uid]
@@ -80,9 +79,12 @@ const messagesModule = {
                     message.text_encrypted = encryptedMessage.text_encrypted;
                 }
 
-                // Add to Firestore
+                // Add to Firestore subcollection
                 const { db } = window.RoommatePortal.config;
-                await db.collection('messages').add(message);
+                await db.collection('households')
+                    .doc(currentHousehold.id)
+                    .collection('messages')
+                    .add(message);
 
                 // Clear message input but keep author name
                 elements.messageInput.value = '';
@@ -108,8 +110,9 @@ const messagesModule = {
             window.RoommatePortal.state.setMessagesListener(null);
         }
 
-        const listener = db.collection('messages')
-            .where('householdId', '==', currentHousehold.id)
+        const listener = db.collection('households')
+            .doc(currentHousehold.id)
+            .collection('messages')
             .onSnapshot(async (snapshot) => {
                 let messagesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -224,7 +227,11 @@ const messagesModule = {
 
         if (confirm('Are you sure you want to delete this message?')) {
             const { db } = window.RoommatePortal.config;
-            db.collection('messages').doc(id).delete()
+            db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('messages')
+                .doc(id)
+                .delete()
                 .then(() => {
                     window.RoommatePortal.utils.showNotification('🗑️ Message deleted');
                 })
@@ -249,7 +256,10 @@ const messagesModule = {
 
         messagesList.forEach(message => {
             if (message.id && (!message.readBy || !message.readBy.includes(currentUser.uid))) {
-                const messageRef = db.collection('messages').doc(message.id);
+                const messageRef = db.collection('households')
+                    .doc(currentHousehold.id)
+                    .collection('messages')
+                    .doc(message.id);
                 batch.update(messageRef, {
                     readBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
                 });

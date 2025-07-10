@@ -98,8 +98,9 @@ const dataCleanup = {
                 });
 
                 // Delete all messages in the household
-                const userMessagesQuery = await db.collection('messages')
-                    .where('householdId', '==', householdId)
+                const userMessagesQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('messages')
                     .get();
 
                 userMessagesQuery.docs.forEach(doc => {
@@ -167,8 +168,9 @@ const dataCleanup = {
                 });
 
                 // Remove user from readBy arrays in remaining messages
-                const allMessagesQuery = await db.collection('messages')
-                    .where('householdId', '==', householdId)
+                const allMessagesQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('messages')
                     .get();
 
                 allMessagesQuery.docs.forEach(doc => {
@@ -187,8 +189,9 @@ const dataCleanup = {
                 const deleteBatch = db.batch();
 
                 // Delete all messages posted by this user
-                const userMessagesQuery = await db.collection('messages')
-                    .where('householdId', '==', householdId)
+                const userMessagesQuery = await db.collection('households')
+                    .doc(householdId)
+                    .collection('messages')
                     .where('authorId', '==', userId)
                     .get();
 
@@ -256,8 +259,9 @@ const dataCleanup = {
             });
 
             // Delete all messages in the household
-            const messagesQuery = await db.collection('messages')
-                .where('householdId', '==', householdId)
+            const messagesQuery = await db.collection('households')
+                .doc(householdId)
+                .collection('messages')
                 .get();
 
             messagesQuery.docs.forEach(doc => {

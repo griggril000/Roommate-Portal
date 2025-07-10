@@ -453,17 +453,22 @@ const householdManagement = {
             }
 
             // 7. Update all messages authored by this user
-            const messagesQuery = await db.collection('messages')
-                .where('householdId', '==', currentHousehold.id)
+            const messagesQuery = await db.collection('households')
+                .doc(currentHousehold.id)
+                .collection('messages')
                 .where('authorId', '==', userId)
                 .get();
 
             const messageUpdates = [];
             messagesQuery.docs.forEach(doc => {
                 messageUpdates.push(
-                    db.collection('messages').doc(doc.id).update({
-                        author: newName
-                    })
+                    db.collection('households')
+                        .doc(currentHousehold.id)
+                        .collection('messages')
+                        .doc(doc.id)
+                        .update({
+                            author: newName
+                        })
                 );
             });
 
