@@ -98,8 +98,6 @@ A modern, household-based roommate management application built with Firebase an
 - **Backend**: Firebase Firestore
 - **Authentication**: Firebase Auth (Google + Email/Password)
 - **Real-time Updates**: Firestore listeners
-- **Voice Recognition**: Web Speech API
-- **Mobile-First**: Responsive design with touch-optimized controls
 
 ### Code Structure
 The application uses a modular JavaScript architecture for better maintainability:
@@ -138,23 +136,3 @@ js/
 - **Keyboard Shortcuts**: Ctrl/Cmd + Enter to submit forms
 - **Visual Feedback**: Toast notifications for all actions
 - **Animated Interactions**: Smooth transitions and loading states
-
-### 🎤 Voice Commands
-- **Voice Input**: Add chores, messages, and announcements using voice
-- **Mobile Optimized**: Specially designed for mobile devices
-- **Smart Processing**: Automatically formats voice input appropriately
-- **Browser Support**: Works in Chrome, Safari, Edge, and other modern browsers
-- **Permission Management**: Handles microphone permissions gracefully
-
-#### Voice Command Examples:
-- **Chores**: "Clean the bathroom", "Vacuum living room", "Take out trash"
-- **Messages**: "Pizza party tonight at seven", "Please keep kitchen clean"
-- **Announcements**: "Rent due on the fifteenth", "House meeting this Sunday"
-- **Assignments**: Say roommate names to assign chores
-
-#### How to Use:
-1. Click the microphone button next to any input field
-2. Allow microphone access when prompted
-3. Speak clearly when the button turns red
-4. Review the text and submit as normal
-5. **Keyboard shortcut**: Press `Ctrl+Shift+V` (or `Cmd+Shift+V` on Mac) while focused on any input field
