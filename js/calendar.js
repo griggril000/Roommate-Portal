@@ -142,6 +142,124 @@ const calendarModule = {
 
     },
 
+    // Toggle time fields visibility based on all-day checkbox within a specific container
+    toggleAllDayFieldsInContainer(container) {
+        console.log('🔧 toggleAllDayFieldsInContainer called with container:', container);
+
+        // Find the all-day checkbox within this container
+        const allDayCheckbox = container.querySelector('#eventAllDay') ||
+            container.querySelector('input[type="checkbox"]');
+
+        if (!allDayCheckbox) {
+            console.error('❌ All-day checkbox not found in container!');
+            console.log('Available checkboxes in container:', container.querySelectorAll('input[type="checkbox"]'));
+            return;
+        }
+
+        const isAllDay = allDayCheckbox.checked;
+        console.log('✅ All-day checkbox found, isAllDay:', isAllDay);
+
+        // Find time containers within this container
+        const startTimeContainer = container.querySelector('#startTimeContainer') ||
+            container.querySelector('[id*="startTime"]') ||
+            container.querySelector('input[type="time"]')?.closest('div');
+
+        const endTimeContainer = container.querySelector('#endTimeContainer') ||
+            container.querySelector('[id*="endTime"]') ||
+            container.querySelectorAll('input[type="time"]')[1]?.closest('div');
+
+        console.log('📦 Containers found:');
+        console.log('  - startTimeContainer:', !!startTimeContainer, startTimeContainer?.id || 'no id');
+        console.log('  - endTimeContainer:', !!endTimeContainer, endTimeContainer?.id || 'no id');
+
+        // Find time input fields within this container
+        const timeField = container.querySelector('#eventTime') ||
+            container.querySelector('input[data-field="start-time"]') ||
+            container.querySelector('input[type="time"]:first-of-type');
+
+        const endTimeField = container.querySelector('#eventEndTime') ||
+            container.querySelector('input[data-field="end-time"]') ||
+            container.querySelector('input[type="time"]:last-of-type');
+
+        console.log('⏰ Time fields found:');
+        console.log('  - timeField:', !!timeField, timeField?.id || 'no id');
+        console.log('  - endTimeField:', !!endTimeField, endTimeField?.id || 'no id');
+
+        // Hide/show time containers (but keep end date visible)
+        if (startTimeContainer) {
+            const newDisplay = isAllDay ? 'none' : '';
+            console.log(`🔄 Setting startTimeContainer display: ${newDisplay}`);
+            startTimeContainer.style.display = newDisplay;
+        } else {
+            console.warn('⚠️ startTimeContainer not found!');
+        }
+
+        if (endTimeContainer) {
+            const newDisplay = isAllDay ? 'none' : '';
+            console.log(`🔄 Setting endTimeContainer display: ${newDisplay}`);
+            endTimeContainer.style.display = newDisplay;
+        } else {
+            console.warn('⚠️ endTimeContainer not found!');
+        }
+
+        // Handle time field requirements and values
+        if (timeField) {
+            if (isAllDay) {
+                timeField.removeAttribute('required');
+                timeField.value = '';
+            } else {
+                timeField.setAttribute('required', 'required');
+            }
+        }
+
+        if (endTimeField) {
+            if (isAllDay) {
+                endTimeField.removeAttribute('required');
+                endTimeField.value = '';
+            } else {
+                endTimeField.setAttribute('required', 'required');
+            }
+        }
+
+        // Adjust grid layouts within this container
+        const timeContainer = container.querySelector('#timeFieldsContainer') ||
+            container.querySelector('[id*="timeFields"]');
+        const endTimeFieldsContainer = container.querySelector('#endTimeFieldsContainer') ||
+            container.querySelector('[id*="endTimeFields"]');
+
+        console.log('🎯 Grid containers found:');
+        console.log('  - timeContainer:', !!timeContainer, timeContainer?.id || 'no id');
+        console.log('  - endTimeFieldsContainer:', !!endTimeFieldsContainer, endTimeFieldsContainer?.id || 'no id');
+
+        if (timeContainer) {
+            // For start date/time container: single column when all-day (only date visible)
+            const newClass = isAllDay ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4';
+            console.log(`🔄 Setting timeContainer class: ${newClass}`);
+            timeContainer.className = newClass;
+        } else {
+            console.warn('⚠️ timeContainer not found!');
+        }
+
+        if (endTimeFieldsContainer) {
+            // For end date/time container: single column when all-day (only end date visible)
+            const newClass = isAllDay ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4';
+            console.log(`🔄 Setting endTimeFieldsContainer class: ${newClass}`);
+            endTimeFieldsContainer.className = newClass;
+
+            // Let's also check what's inside this container
+            const endDateField = container.querySelector('#eventEndDate');
+            console.log('📅 End date field found:', !!endDateField, endDateField?.style.display || 'default display');
+            if (endDateField) {
+                console.log('📅 End date field visibility:', getComputedStyle(endDateField).display);
+                console.log('📅 End date field value:', endDateField.value);
+            }
+        } else {
+            console.warn('⚠️ endTimeFieldsContainer not found!');
+        }
+
+        console.log('✅ toggleAllDayFieldsInContainer completed');
+    },
+
     // Setup calendar navigation
     setupCalendarNavigation() {
         const prevMonthBtn = document.getElementById('prevMonthBtn');
@@ -1006,11 +1124,19 @@ const calendarModule = {
 
     // Populate form with editing event data
     populateEditForm() {
-        if (!this.editingEventData) return;
+        console.log('📝 populateEditForm called with editingEventData:', this.editingEventData);
+
+        if (!this.editingEventData) {
+            console.warn('⚠️ No editingEventData available');
+            return;
+        }
 
         // Find form elements (could be in cloned form within modal)
         const modal = document.querySelector('.input-modal');
+        console.log('🪟 Modal found:', !!modal);
+
         if (!modal) {
+            console.log('📋 No modal found, using original form');
             // Try original form if no modal
             this.populateFormElements(document);
             this.updateFormButtonText(document, true);
@@ -1019,6 +1145,8 @@ const calendarModule = {
 
         // Check if the modal content is ready
         const modalContent = modal.querySelector('form');
+        console.log('📋 Modal content (form) found:', !!modalContent);
+
         if (!modalContent) {
             console.log('Calendar: Modal content not ready, retrying...');
             // Retry after a short delay
@@ -1028,6 +1156,7 @@ const calendarModule = {
             return;
         }
 
+        console.log('📋 Populating form elements within modal');
         // Populate form elements within the modal
         this.populateFormElements(modal);
         this.updateFormButtonText(modal, true);
@@ -1088,9 +1217,13 @@ const calendarModule = {
             locationField.value = this.editingEventData.location;
         }
         if (allDayField) {
+            console.log('☑️ Setting all-day checkbox to:', this.editingEventData.isAllDay);
             allDayField.checked = this.editingEventData.isAllDay;
-            // Trigger the toggle to show/hide time fields
-            this.toggleAllDayFields();
+            // Trigger the toggle to show/hide time fields within this container
+            console.log('🔄 Triggering toggleAllDayFieldsInContainer');
+            this.toggleAllDayFieldsInContainer(container);
+        } else {
+            console.warn('⚠️ All-day checkbox not found in container');
         }
         if (privacyField) {
             privacyField.value = this.editingEventData.privacy;
