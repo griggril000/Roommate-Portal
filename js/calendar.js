@@ -474,7 +474,7 @@ const calendarModule = {
                                 <div class="calendar-event ${event.privacy === 'private' ? 'calendar-event-private' : 'calendar-event-shared'} ${event.isAllDay ? 'calendar-event-allday' : ''}" 
                                      title="${event.title}${event.description ? ' - ' + event.description : ''}${event.location ? ' at ' + event.location : ''}${event.isAllDay ? ' (All day)' : ''}"
                                      data-event-id="${event.id}">
-                                    ${event.privacy === 'private' ? '🔒' : '👥'} ${event.isAllDay ? '📅 ' : ''}${event.title}
+                                    <i class="fas ${event.privacy === 'private' ? 'fa-lock' : 'fa-users'} mr-1"></i>${event.isAllDay ? '📅 ' : ''}${event.title}
                                 </div>
                             `).join('')}
                             ${hasMoreSingleDayEvents ? `<div class="calendar-view-all-btn">+${singleDayEvents.length - maxSingleDayEvents} more...</div>` : ''}
@@ -789,7 +789,7 @@ const calendarModule = {
         console.log('Calendar: Event positioned at', left + '%', 'width', width + '%', 'top', top + 'px');
 
         // Set content with ellipsis for continuation
-        let displayText = `${event.privacy === 'private' ? '🔒' : '👥'} ${event.isAllDay ? '📅 ' : ''}${event.title}`;
+        let displayText = `<i class="fas ${event.privacy === 'private' ? 'fa-lock' : 'fa-users'} mr-1"></i>${event.isAllDay ? '📅 ' : ''}${event.title}`;
         if (showStartEllipsis) displayText = '← ' + displayText;
         if (showEndEllipsis) displayText = displayText + ' →';
 
@@ -881,7 +881,7 @@ const calendarModule = {
                 eventElement.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
                         <h4 class="font-semibold text-lg">
-                            ${event.privacy === 'private' ? '🔒' : '👥'} ${window.RoommatePortal.utils.escapeHtml(event.title)}
+                            <i class="fas ${event.privacy === 'private' ? 'fa-lock' : 'fa-users'} mr-1"></i>${window.RoommatePortal.utils.escapeHtml(event.title)}
                         </h4>
                         <div class="flex space-x-2">
                             <button class="edit-event-btn text-blue-600 hover:text-blue-800" data-event-id="${event.id}">
