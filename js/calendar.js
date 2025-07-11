@@ -139,7 +139,7 @@ const calendarModule = {
         } else {
             console.warn('⚠️ End time fields container not found');
         }
-        
+
     },
 
     // Setup calendar navigation
@@ -1327,70 +1327,6 @@ const calendarModule = {
     // Delete all events for a household (called when household is deleted)
     async deleteAllHouseholdEvents(householdId) {
         return await window.RoommatePortal.dataCleanup.deleteAllHouseholdEvents(householdId);
-    },
-
-    // Debug function - call this from browser console to test
-    debugAllDayToggle() {
-        console.log('🐛 DEBUG: All-day toggle inspection');
-
-        // Check if elements exist
-        const allDayCheckbox = document.getElementById('eventAllDay');
-        const startTimeContainer = document.getElementById('startTimeContainer');
-        const endTimeContainer = document.getElementById('endTimeContainer');
-        const timeField = document.getElementById('eventTime');
-        const endTimeField = document.getElementById('eventEndTime');
-        const timeContainer = document.getElementById('timeFieldsContainer');
-        const endTimeFieldsContainer = document.getElementById('endTimeFieldsContainer');
-
-        console.log('📋 All-day checkbox:', allDayCheckbox);
-        console.log('🕐 Start time container:', startTimeContainer);
-        console.log('🕐 End time container:', endTimeContainer);
-        console.log('⏰ Time field:', timeField);
-        console.log('⏰ End time field:', endTimeField);
-        console.log('📦 Time fields container:', timeContainer);
-        console.log('📦 End time fields container:', endTimeFieldsContainer);
-
-        if (allDayCheckbox) {
-            console.log('✅ Checkbox current state:', allDayCheckbox.checked);
-            console.log('🔄 Manually toggling checkbox...');
-            allDayCheckbox.checked = !allDayCheckbox.checked;
-            console.log('✅ Checkbox new state:', allDayCheckbox.checked);
-
-            // Manually trigger the toggle
-            this.toggleAllDayFields();
-        }
-
-        // Check current styles
-        if (startTimeContainer) {
-            console.log('🎨 Start container styles:', {
-                display: startTimeContainer.style.display,
-                computed: window.getComputedStyle(startTimeContainer).display
-            });
-        }
-
-        if (endTimeContainer) {
-            console.log('🎨 End container styles:', {
-                display: endTimeContainer.style.display,
-                computed: window.getComputedStyle(endTimeContainer).display
-            });
-        }
-
-        // List all form elements
-        const form = document.getElementById('addEventForm');
-        if (form) {
-            const formElements = form.querySelectorAll('input, textarea, select');
-            console.log('📝 All form elements:', formElements);
-        }
-
-        return {
-            allDayCheckbox,
-            startTimeContainer,
-            endTimeContainer,
-            timeField,
-            endTimeField,
-            timeContainer,
-            endTimeFieldsContainer
-        };
     },
 
     // Update form button text based on editing state
