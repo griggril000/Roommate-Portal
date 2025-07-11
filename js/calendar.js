@@ -614,8 +614,8 @@ const calendarModule = {
                 const dayElement = dayElements[i];
                 if (dayElement.date) {
                     const dayDate = new Date(dayElement.date.getFullYear(), dayElement.date.getMonth(), dayElement.date.getDate());
-                    const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), event.getDate());
-                    const eventEndDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), event.getDate());
+                    const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+                    const eventEndDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
 
                     if (startIndex === -1 && dayDate >= eventStartDate) {
                         startIndex = i;
