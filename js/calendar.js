@@ -1201,10 +1201,15 @@ const calendarModule = {
             // Include events that:
             // 1. Start in the future (within next 7 days)
             // 2. Are happening right now (started but not ended)
-            // 3. Start later today but haven't started yet
-            const startsInFuture = eventStart >= now && eventStart <= nextWeek;
+            // 3. Start today (including multi-day events starting today)
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+
+            const startsInFuture = eventStart > now && eventStart <= nextWeek;
             const isCurrentlyOngoing = eventStart <= now && eventEnd >= now;
-            const eventInRange = startsInFuture || isCurrentlyOngoing;
+            const startsToday = eventStartDate.getTime() === today.getTime();
+
+            const eventInRange = startsInFuture || isCurrentlyOngoing || startsToday;
 
             // Filter private events
             if (event.privacy === 'private' && event.createdBy !== currentUser?.uid) {
