@@ -1156,7 +1156,6 @@ const calendarModule = {
 
     // Clear form
     clearForm() {
-        console.log('🧹 Clearing form...');
 
         document.getElementById('eventTitle').value = '';
         document.getElementById('eventDescription').value = '';
@@ -1169,12 +1168,10 @@ const calendarModule = {
 
         const allDayCheckbox = document.getElementById('eventAllDay');
         if (allDayCheckbox) {
-            console.log('📋 Unchecking all-day checkbox');
             allDayCheckbox.checked = false;
         }
 
         // Reset time fields visibility
-        console.log('🔄 Calling toggleAllDayFields from clearForm');
         this.toggleAllDayFields();
 
         // Remove editing state
