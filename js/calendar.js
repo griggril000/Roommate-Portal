@@ -557,7 +557,7 @@ const calendarModule = {
     },    // Render multi-day events as spanning elements
     renderMultiDayEvents(dayElements) {
         const currentUser = window.RoommatePortal.state.getCurrentUser();
-        const maxDisplayedEvents = 3; // Maximum number of multi-day events to display
+        const maxDisplayedEvents = 2; // Maximum number of multi-day events to display
 
         // Get all multi-day events that intersect with this month
         const multiDayEvents = this.events.filter(event => {
