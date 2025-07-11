@@ -640,23 +640,17 @@ const voiceCommandsModule = {
 
     // Get current page context
     getCurrentPageContext() {
-        // Check which section is currently visible (using correct section IDs)
-        const sections = [
-            { id: 'dashboardSection', name: 'dashboard' },
-            { id: 'choreSection', name: 'chores' },
-            { id: 'messageSection', name: 'messages' },
-            { id: 'announcementsSection', name: 'announcements' },
-            { id: 'calendarSection', name: 'calendar' }
-        ];
-        
+        // Check which section is currently visible
+        const sections = ['dashboard', 'chores', 'messages', 'announcements', 'calendar'];
+
         for (const section of sections) {
-            const sectionElement = document.getElementById(section.id);
+            const sectionElement = document.getElementById(section);
             if (sectionElement && !sectionElement.classList.contains('hidden')) {
-                console.log(`🎤 Current page context detected: ${section.name} (element: ${section.id})`);
-                return section.name;
+                console.log(`🎤 Current page context detected: ${section}`);
+                return section;
             }
         }
-        
+
         console.log('🎤 No specific context found, defaulting to dashboard');
         return 'dashboard'; // Default fallback
     },
