@@ -1185,8 +1185,6 @@ const calendarModule = {
 
         // Reset button text to "Add Event"
         this.updateFormButtonText(document, false);
-
-        console.log('✅ Form cleared');
     },
 
     // Update calendar statistics
