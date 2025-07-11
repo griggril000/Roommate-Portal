@@ -269,13 +269,22 @@ const rewardsModule = {
                 return;
             }
 
+            // Decrypt the reward name for use in UI and logging
+            let rewardName = reward.name;
+            try {
+                rewardName = await window.RoommatePortal.encryption.decryptData(reward.name, currentHousehold.encryptionKey);
+            } catch (decryptError) {
+                console.warn('Could not decrypt reward name, using encrypted version:', decryptError);
+                rewardName = reward.name; // Fallback to encrypted name if decryption fails
+            }
+
             const currentPoints = this.getCurrentPoints();
             if (currentPoints < reward.points) {
                 window.RoommatePortal.utils.showNotification(`❌ Not enough points! You need ${reward.points} points but only have ${currentPoints}.`);
                 return;
             }
 
-            if (!confirm(`HOUSEHOLD REWARD NOTICE: "${reward.name}" will be redeemed for the entire household using ${reward.points} shared household points.\n\n Do you want to proceed with this redemption?`)) {
+            if (!confirm(`HOUSEHOLD REWARD NOTICE: "${rewardName}" will be redeemed for the entire household using ${reward.points} shared household points.\n\n Do you want to proceed with this redemption?`)) {
                 return;
             }
 
@@ -293,7 +302,7 @@ const rewardsModule = {
             // Refresh modal if open
             this.refreshRewardsModalIfOpen();
 
-            window.RoommatePortal.utils.showNotification(`🎉 Reward redeemed! "${reward.name}" - Remaining points: ${newPoints}`);
+            window.RoommatePortal.utils.showNotification(`🎉 Reward redeemed! "${rewardName}" - Remaining points: ${newPoints}`);
 
             // Update Firestore in background
             await db.collection('households').doc(currentHousehold.id).update({
@@ -301,7 +310,7 @@ const rewardsModule = {
             });
 
             // Log the transaction
-            await this.logTransaction('redeemed', `Redeemed reward: ${reward.name}`, -reward.points, currentUser.displayName);
+            await this.logTransaction('redeemed', `Redeemed reward: ${rewardName}`, -reward.points, currentUser.displayName);
 
             // Refresh household data in background
             window.RoommatePortal.household.loadHouseholdData();
@@ -388,11 +397,20 @@ const rewardsModule = {
                 return;
             }
 
+            // Decrypt the reward name for logging
+            let rewardName = reward.name;
+            try {
+                rewardName = await window.RoommatePortal.encryption.decryptData(reward.name, currentHousehold.encryptionKey);
+            } catch (decryptError) {
+                console.warn('Could not decrypt reward name, using encrypted version:', decryptError);
+                rewardName = reward.name; // Fallback to encrypted name if decryption fails
+            }
+
             await db.collection('households').doc(currentHousehold.id)
                 .collection('rewards').doc(rewardId).delete();
 
             // Log the transaction
-            await this.logTransaction('system', `Deleted reward: ${reward.name}`, 0, currentUser.displayName);
+            await this.logTransaction('system', `Deleted reward: ${rewardName}`, 0, currentUser.displayName);
 
             window.RoommatePortal.utils.showNotification('🗑️ Reward deleted successfully!');
 
