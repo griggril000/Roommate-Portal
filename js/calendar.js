@@ -870,7 +870,7 @@ const calendarModule = {
                         month: 'short', day: 'numeric'
                     });
                     const endTimeStr = endDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    timeDisplay = `<i class="fas fa-calendar-week text-gray-500 mr-1"></i>${startDateStr}, ${startTimeStr} - ${endDateStr} ${endTimeStr}`;
+                    timeDisplay = `<i class="fas fa-calendar-week text-gray-500 mr-1"></i>${startDateStr}, ${startTimeStr} - ${endDateStr}, ${endTimeStr}`;
                 } else {
                     // Show just times for same-day events
                     const startTime = startDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
