@@ -430,7 +430,7 @@ const notificationsModule = {
 
             // Delay notifications slightly to avoid overwhelming
             setTimeout(() => {
-                this.createNotification(`${icon} ${author}`, body);
+                this.createNotification(`${icon} ${author}`, body, 'messages');
             }, index * 1000);
         });
 
@@ -442,7 +442,8 @@ const notificationsModule = {
             setTimeout(() => {
                 this.createNotification(
                     '💬 Multiple roommates',
-                    `${totalNewMessages} new messages from ${remainingAuthors + 3} roommates`
+                    `${totalNewMessages} new messages from ${remainingAuthors + 3} roommates`,
+                    'messages'
                 );
             }, 3000);
         }
@@ -549,7 +550,7 @@ const notificationsModule = {
 
             // Delay notifications slightly to avoid overwhelming
             setTimeout(() => {
-                this.createNotification(`${icon} ${author}`, body);
+                this.createNotification(`${icon} ${author}`, body, 'announcements');
             }, index * 1000);
         });
 
@@ -561,14 +562,15 @@ const notificationsModule = {
             setTimeout(() => {
                 this.createNotification(
                     '📢 Multiple roommates',
-                    `${totalNewAnnouncements} new announcements from ${remainingAuthors + 3} roommates`
+                    `${totalNewAnnouncements} new announcements from ${remainingAuthors + 3} roommates`,
+                    'announcements'
                 );
             }, 3000);
         }
     },
 
     // Create and show a browser notification
-    createNotification(title, body) {
+    createNotification(title, body, type = 'messages') {
         if (this.state.permission !== 'granted') {
             return;
         }
@@ -578,7 +580,7 @@ const notificationsModule = {
                 body: body,
                 icon: 'favicons/android-chrome-192x192.png',
                 badge: 'favicons/android-chrome-192x192.png',
-                tag: 'roommate-message', // This helps replace previous notifications
+                tag: `roommate-${type}`, // This helps replace previous notifications of the same type
                 requireInteraction: false,
                 silent: false
             });
@@ -588,10 +590,10 @@ const notificationsModule = {
                 notification.close();
             }, 6000);
 
-            // Handle notification click
+            // Handle notification click - navigate to appropriate tab based on type
             notification.onclick = () => {
                 window.focus();
-                window.RoommatePortal.utils.switchTab('messages');
+                window.RoommatePortal.utils.switchTab(type);
                 notification.close();
             };
 
