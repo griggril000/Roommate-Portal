@@ -47,13 +47,6 @@ const statistics = {
 
         // Update rewards statistics
         this.updateRewardsStats();
-
-        // Mark messages as read after viewing (only if user is still logged in and has household)
-        if (currentUser && currentHousehold && messagesList.length > 0) {
-            setTimeout(() => {
-                window.RoommatePortal.messages.markMessagesAsRead();
-            }, 5000);
-        }
     },
 
     // Update rewards statistics
