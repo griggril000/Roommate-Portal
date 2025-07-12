@@ -192,7 +192,6 @@ const notificationsModule = {
 
                 // Reset prompt flag when permission changes
                 if (this.state.permission !== 'default') {
-                    console.log('🔔 Resetting prompt flag due to permission change');
                     localStorage.removeItem('roommatePortal_hasPromptedNotifications');
                 }
 
@@ -241,15 +240,11 @@ const notificationsModule = {
 
     // Request notification permission from user
     async requestPermission() {
-        console.log('🔔 Requesting notification permission...');
 
         if (!this.checkBrowserSupport()) {
             console.error('🔔 Browser does not support notifications');
             return false;
         }
-
-        // Check current permission state
-        console.log('🔔 Current permission state:', Notification.permission);
 
         try {
             let permission;
@@ -265,7 +260,6 @@ const notificationsModule = {
                 });
             }
 
-            console.log('🔔 Permission request result:', permission);
             this.state.permission = permission;
 
             // Dispatch permission change event
@@ -274,7 +268,6 @@ const notificationsModule = {
             }));
 
             if (permission === 'granted') {
-                console.log('🔔 Permission granted, enabling notifications');
                 window.RoommatePortal.utils.showNotification('🔔 Notifications enabled! You\'ll be notified of new messages.');
                 this.state.isEnabled = true;
                 this.saveNotificationSettings();
@@ -287,7 +280,6 @@ const notificationsModule = {
                 this.saveNotificationSettings();
                 return false;
             } else {
-                console.log('🔔 Permission default/dismissed');
                 window.RoommatePortal.utils.showNotification('ℹ️ Notification permission not granted. You can try again later.');
                 return false;
             }
@@ -312,8 +304,6 @@ const notificationsModule = {
 
         // Start checking
         this.startBackgroundChecking();
-
-        console.log('🔔 Notification checking started');
     },
 
     // Stop notification checking
