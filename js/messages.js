@@ -26,8 +26,14 @@ const messagesModule = {
         // Listen for tab switches to messages
         window.addEventListener('roommatePortal:tabSwitch', (event) => {
             if (event.detail.tab === 'messages') {
-                // Delay slightly to ensure DOM is updated
-                setTimeout(() => this.markMessagesAsRead(), 500);
+                // Delay slightly to ensure DOM is updated and user is actually viewing
+                setTimeout(() => {
+                    // Double-check that the messages section is actually visible
+                    const messageSection = document.getElementById('messageSection');
+                    if (messageSection && !messageSection.classList.contains('hidden') && !document.hidden) {
+                        this.markMessagesAsRead();
+                    }
+                }, 500);
             }
         });
 
@@ -36,7 +42,13 @@ const messagesModule = {
             if (!document.hidden) {
                 const messageSection = document.getElementById('messageSection');
                 if (messageSection && !messageSection.classList.contains('hidden')) {
-                    setTimeout(() => this.markMessagesAsRead(), 500);
+                    // Additional delay to ensure user is actively viewing
+                    setTimeout(() => {
+                        // Re-check visibility state in case user quickly switched away
+                        if (!document.hidden && messageSection && !messageSection.classList.contains('hidden')) {
+                            this.markMessagesAsRead();
+                        }
+                    }, 1000);
                 }
             }
         });

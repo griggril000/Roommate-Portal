@@ -75,9 +75,7 @@ const appModule = {
             choresTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('chores');
                 setTimeout(() => this.createFAB('chores'), 100);
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'chores' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
 
@@ -93,9 +91,7 @@ const appModule = {
             newMessagesTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('messages');
                 setTimeout(() => this.createFAB('messages'), 100);
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'messages' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
 
@@ -104,9 +100,7 @@ const appModule = {
             activeAnnouncementsTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('announcements');
                 setTimeout(() => this.createFAB('announcements'), 100);
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'announcements' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
 
@@ -115,9 +109,7 @@ const appModule = {
             upcomingEventsTile.addEventListener('click', () => {
                 window.RoommatePortal.utils.switchTab('calendar');
                 setTimeout(() => this.createFAB('calendar'), 100);
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'calendar' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
     },
@@ -138,9 +130,7 @@ const appModule = {
                     this.currentFAB.remove();
                     this.currentFAB = null;
                 }
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'dashboard' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
 
@@ -153,9 +143,7 @@ const appModule = {
                     this.currentFAB.remove();
                     this.currentFAB = null;
                 }
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'dashboard' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
 
@@ -168,9 +156,7 @@ const appModule = {
                     this.currentFAB.remove();
                     this.currentFAB = null;
                 }
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'dashboard' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
 
@@ -183,9 +169,7 @@ const appModule = {
                     this.currentFAB.remove();
                     this.currentFAB = null;
                 }
-                window.dispatchEvent(new CustomEvent('roommatePortal:tabSwitch', {
-                    detail: { tab: 'dashboard' }
-                }));
+                // Event is already dispatched by switchTab function
             });
         }
     },

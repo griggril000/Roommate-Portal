@@ -25,17 +25,29 @@ const announcementsModule = {
         // Listen for tab switches to announcements
         window.addEventListener('roommatePortal:tabSwitch', (event) => {
             if (event.detail.tab === 'announcements') {
-                // Delay slightly to ensure DOM is updated
-                setTimeout(() => this.markAnnouncementsAsRead(), 500);
+                // Delay slightly to ensure DOM is updated and user is actually viewing
+                setTimeout(() => {
+                    // Double-check that the announcements section is actually visible
+                    const announcementsSection = document.getElementById('announcementsSection');
+                    if (announcementsSection && !announcementsSection.classList.contains('hidden') && !document.hidden) {
+                        this.markAnnouncementsAsRead();
+                    }
+                }, 500);
             }
         });
 
         // Also mark as read when page becomes visible and announcements tab is active
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                const announcementSection = document.getElementById('announcementSection');
-                if (announcementSection && !announcementSection.classList.contains('hidden')) {
-                    setTimeout(() => this.markAnnouncementsAsRead(), 500);
+                const announcementsSection = document.getElementById('announcementsSection');
+                if (announcementsSection && !announcementsSection.classList.contains('hidden')) {
+                    // Additional delay to ensure user is actively viewing
+                    setTimeout(() => {
+                        // Re-check visibility state in case user quickly switched away
+                        if (!document.hidden && announcementsSection && !announcementsSection.classList.contains('hidden')) {
+                            this.markAnnouncementsAsRead();
+                        }
+                    }, 1000);
                 }
             }
         });
