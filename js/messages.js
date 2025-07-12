@@ -151,6 +151,59 @@ const messagesModule = {
         window.RoommatePortal.state.setMessagesListener(listener);
     },
 
+    // Generate read receipts display
+    generateReadReceipts(message) {
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+
+        if (!currentHousehold || !currentHousehold.memberDetails || !message.readBy) {
+            return '';
+        }
+
+        // Get all household members except the message author
+        const allMembers = Object.keys(currentHousehold.memberDetails)
+            .filter(uid => uid !== message.authorId);
+
+        // Get read members (excluding author)
+        const readMembers = message.readBy.filter(uid => uid !== message.authorId);
+
+        // Get unread members
+        const unreadMembers = allMembers.filter(uid => !message.readBy.includes(uid));
+
+        if (allMembers.length === 0) {
+            return '';
+        }
+
+        let receiptsHtml = '<div class="read-receipts mt-2 text-xs">';
+
+        // Show read count
+        if (readMembers.length > 0) {
+            const readNames = readMembers
+                .map(uid => currentHousehold.memberDetails[uid]?.displayName || 'Unknown')
+                .slice(0, 3); // Show max 3 names
+
+            receiptsHtml += `<div class="text-green-600">
+                <i class="fas fa-check-double mr-1"></i>
+                Read by: ${readNames.join(', ')}`;
+
+            if (readMembers.length > 3) {
+                receiptsHtml += ` +${readMembers.length - 3} more`;
+            }
+            receiptsHtml += '</div>';
+        }
+
+        // Show unread count
+        if (unreadMembers.length > 0) {
+            receiptsHtml += `<div class="text-gray-500 mt-1">
+                <i class="fas fa-clock mr-1"></i>
+                ${unreadMembers.length} unread
+            </div>`;
+        }
+
+        receiptsHtml += '</div>';
+        return receiptsHtml;
+    },
+
     // Load and display messages
     loadMessages() {
         const elements = window.RoommatePortal.state.elements;
@@ -185,6 +238,7 @@ const messagesModule = {
             const avatarEmoji = window.RoommatePortal.utils.getAvatarEmoji(message.author, message.authorId);
             // Only check if it's own message if user is logged in
             const isOwnMessage = currentUser && message.authorId === currentUser.uid;
+            const readReceipts = isOwnMessage ? this.generateReadReceipts(message) : '';
 
             messageElement.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
@@ -201,6 +255,7 @@ const messagesModule = {
                     </div>
                 </div>
                 <p class="message-text">${message.text}</p>
+                ${readReceipts}
             `;
 
             elements.messageList.appendChild(messageElement);
@@ -268,7 +323,12 @@ const messagesModule = {
         });
 
         if (hasUpdates) {
-            batch.commit().catch(error => {
+            batch.commit().then(() => {
+                // Clear read messages from notification tracking
+                if (window.RoommatePortal.notifications) {
+                    window.RoommatePortal.notifications.clearReadItems();
+                }
+            }).catch(error => {
                 // Only show error if user is still logged in
                 if (currentUser && currentHousehold) {
                     console.error('Error updating message read status:', error);

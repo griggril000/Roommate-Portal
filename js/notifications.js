@@ -509,10 +509,14 @@ const notificationsModule = {
             // Skip own announcements
             if (announcement.authorId === currentUser.uid) return false;
 
+            // Check if announcement is unread by current user
+            const isUnread = !announcement.readBy || !announcement.readBy.includes(currentUser.uid);
+
             // Check if we haven't already notified about this announcement
             const isNewToUs = !this.state.unreadAnnouncementIds.has(announcement.id);
 
-            return isNewToUs;
+            // Announcement must be both unread and new to our notification system
+            return isUnread && isNewToUs;
         });
 
         return newAnnouncements;
@@ -885,6 +889,32 @@ const notificationsModule = {
         // Prevent body scroll while modal is open
         document.body.style.overflow = 'hidden';
     },
+
+    // Clear read messages and announcements from notification tracking
+    clearReadItems() {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        if (!currentUser) return;
+
+        const messages = window.RoommatePortal.state.getMessages() || [];
+        const announcements = window.RoommatePortal.state.getAnnouncements() || [];
+
+        // Clear read message IDs from tracking
+        messages.forEach(message => {
+            if (message.readBy && message.readBy.includes(currentUser.uid)) {
+                this.state.unreadMessageIds.delete(message.id);
+            }
+        });
+
+        // Clear read announcement IDs from tracking
+        announcements.forEach(announcement => {
+            if (announcement.readBy && announcement.readBy.includes(currentUser.uid)) {
+                this.state.unreadAnnouncementIds.delete(announcement.id);
+            }
+        });
+
+        // Save updated state
+        this.saveNotificationSettings();
+    }
 };
 
 // Cleanup on page unload

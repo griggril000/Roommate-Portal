@@ -7,6 +7,7 @@ const announcementsModule = {
     // Initialize announcement management
     init() {
         this.setupAnnouncementForm();
+        this.setupAutoMarkAsRead();
         this.startExpirationCheck();
     },
 
@@ -17,6 +18,27 @@ const announcementsModule = {
         if (elements.postAnnouncementForm) {
             elements.postAnnouncementForm.addEventListener('submit', this.handlePostAnnouncement.bind(this));
         }
+    },
+
+    // Setup automatic mark as read when viewing announcements
+    setupAutoMarkAsRead() {
+        // Listen for tab switches to announcements
+        window.addEventListener('roommatePortal:tabSwitch', (event) => {
+            if (event.detail.tab === 'announcements') {
+                // Delay slightly to ensure DOM is updated
+                setTimeout(() => this.markAnnouncementsAsRead(), 500);
+            }
+        });
+
+        // Also mark as read when page becomes visible and announcements tab is active
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                const announcementSection = document.getElementById('announcementSection');
+                if (announcementSection && !announcementSection.classList.contains('hidden')) {
+                    setTimeout(() => this.markAnnouncementsAsRead(), 500);
+                }
+            }
+        });
     },
 
     // Handle post announcement form submission
@@ -54,7 +76,9 @@ const announcementsModule = {
                 author: currentUser.displayName || currentUser.email,
                 authorId: currentUser.uid,
                 createdAt: new Date().toISOString(),
-                expiresAt: expirationInput?.value ? new Date(expirationInput.value).toISOString() : null
+                expiresAt: expirationInput?.value ? new Date(expirationInput.value).toISOString() : null,
+                // Track which users have read this announcement (author has read it by default)
+                readBy: [currentUser.uid]
             };
 
             // Only add encrypted flags if the fields were actually encrypted
@@ -134,6 +158,59 @@ const announcementsModule = {
             }));
     },
 
+    // Generate read receipts display for announcements
+    generateReadReceipts(announcement) {
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+
+        if (!currentHousehold || !currentHousehold.memberDetails || !announcement.readBy) {
+            return '';
+        }
+
+        // Get all household members except the announcement author
+        const allMembers = Object.keys(currentHousehold.memberDetails)
+            .filter(uid => uid !== announcement.authorId);
+
+        // Get read members (excluding author)
+        const readMembers = announcement.readBy.filter(uid => uid !== announcement.authorId);
+
+        // Get unread members
+        const unreadMembers = allMembers.filter(uid => !announcement.readBy.includes(uid));
+
+        if (allMembers.length === 0) {
+            return '';
+        }
+
+        let receiptsHtml = '<div class="read-receipts mt-3 pt-3 border-t border-orange-200 text-xs">';
+
+        // Show read count
+        if (readMembers.length > 0) {
+            const readNames = readMembers
+                .map(uid => currentHousehold.memberDetails[uid]?.displayName || 'Unknown')
+                .slice(0, 3); // Show max 3 names
+
+            receiptsHtml += `<div class="text-green-600 mb-1">
+                <i class="fas fa-check-double mr-1"></i>
+                Read by: ${readNames.join(', ')}`;
+
+            if (readMembers.length > 3) {
+                receiptsHtml += ` +${readMembers.length - 3} more`;
+            }
+            receiptsHtml += '</div>';
+        }
+
+        // Show unread count
+        if (unreadMembers.length > 0) {
+            receiptsHtml += `<div class="text-gray-500">
+                <i class="fas fa-clock mr-1"></i>
+                ${unreadMembers.length} unread
+            </div>`;
+        }
+
+        receiptsHtml += '</div>';
+        return receiptsHtml;
+    },
+
     // Display announcements in the UI
     displayAnnouncements(announcements) {
         const announcementList = document.getElementById('announcementList');
@@ -154,17 +231,27 @@ const announcementsModule = {
             const expiresDate = announcement.expiresAt ? new Date(announcement.expiresAt) : null;
             const currentUser = window.RoommatePortal.state.getCurrentUser();
             const isAuthor = currentUser && announcement.authorId === currentUser.uid;
+            const readReceipts = isAuthor ? this.generateReadReceipts(announcement) : '';
+            const isUnread = currentUser && (!announcement.readBy || !announcement.readBy.includes(currentUser.uid));
 
             return `
                 <div class="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-6 shadow-sm">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
-                            ${announcement.title ? `
-                                <h3 class="text-lg font-semibold text-gray-800 mb-2">
-                                    <i class="fas fa-bullhorn text-orange-600 mr-2"></i>
-                                    ${window.RoommatePortal.utils.escapeHtml(announcement.title)}
-                                </h3>
-                            ` : ''}
+                            <div class="flex items-center justify-between mb-2">
+                                ${announcement.title ? `
+                                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                                        <i class="fas fa-bullhorn text-orange-600 mr-2"></i>
+                                        ${window.RoommatePortal.utils.escapeHtml(announcement.title)}
+                                        ${isUnread ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-2">NEW</span>' : ''}
+                                    </h3>
+                                ` : `
+                                    <div class="flex items-center">
+                                        <i class="fas fa-bullhorn text-orange-600 mr-2"></i>
+                                        ${isUnread ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">NEW</span>' : ''}
+                                    </div>
+                                `}
+                            </div>
                             <p class="text-gray-700 mb-3 whitespace-pre-wrap">${window.RoommatePortal.utils.escapeHtml(announcement.body)}</p>
                             <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                                 <span class="flex items-center">
@@ -182,6 +269,7 @@ const announcementsModule = {
                                     </span>
                                 ` : ''}
                             </div>
+                            ${readReceipts}
                         </div>
                         ${isAuthor ? `
                             <button onclick="window.RoommatePortal.announcements.deleteAnnouncement('${announcement.id}')"
@@ -262,6 +350,46 @@ const announcementsModule = {
             .catch(error => {
                 console.error('Error checking expired announcements:', error);
             });
+    },
+
+    // Mark announcements as read for the current user
+    markAnnouncementsAsRead() {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+        const announcements = window.RoommatePortal.state.getAnnouncements();
+
+        if (!currentUser || !currentHousehold || !announcements) return;
+
+        const { db } = window.RoommatePortal.config;
+        const batch = db.batch();
+        let hasUpdates = false;
+
+        announcements.forEach(announcement => {
+            if (announcement.id && (!announcement.readBy || !announcement.readBy.includes(currentUser.uid))) {
+                const announcementRef = db.collection('households')
+                    .doc(currentHousehold.id)
+                    .collection('announcements')
+                    .doc(announcement.id);
+                batch.update(announcementRef, {
+                    readBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+                });
+                hasUpdates = true;
+            }
+        });
+
+        if (hasUpdates) {
+            batch.commit().then(() => {
+                // Clear read announcements from notification tracking
+                if (window.RoommatePortal.notifications) {
+                    window.RoommatePortal.notifications.clearReadItems();
+                }
+            }).catch(error => {
+                // Only show error if user is still logged in
+                if (currentUser && currentHousehold) {
+                    console.error('Error updating announcement read status:', error);
+                }
+            });
+        }
     }
 };
 

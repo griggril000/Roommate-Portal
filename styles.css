@@ -914,3 +914,56 @@ header {
         width: calc(100% - 40px);
     }
 }
+
+/* Read Receipts Styles */
+.read-receipts {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding-top: 8px;
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.read-receipts .text-green-600 {
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.read-receipts .text-gray-500 {
+    color: #6b7280;
+}
+
+.read-receipts i {
+    opacity: 0.7;
+}
+
+/* NEW badge styles for announcements */
+.bg-red-500 {
+    background-color: #ef4444;
+}
+
+.text-white {
+    color: white;
+}
+
+/* Enhanced message and announcement styles */
+.message-item {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.message-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive read receipts */
+@media (max-width: 768px) {
+    .read-receipts {
+        font-size: 10px;
+    }
+
+    .read-receipts div {
+        margin-bottom: 2px;
+    }
+}

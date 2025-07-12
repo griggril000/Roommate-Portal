@@ -57,6 +57,13 @@ const household = {
                 mainContent.style.pointerEvents = 'auto';
             }
 
+            // Run migrations to ensure data compatibility
+            if (window.RoommatePortal.migration) {
+                window.RoommatePortal.migration.runAllMigrations().catch(error => {
+                    console.error('Migration error:', error);
+                });
+            }
+
             window.RoommatePortal.chores.loadChoresFromFirestore();
             window.RoommatePortal.messages.loadMessagesFromFirestore();
             window.RoommatePortal.announcements.loadAnnouncements();
