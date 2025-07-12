@@ -19,6 +19,14 @@ const authModule = {
             if (user) {
                 window.RoommatePortal.state.setCurrentUser(user);
 
+                // Check if this user logged in with Google and needs profile picture update
+                if (user.photoURL && user.providerData) {
+                    const hasGoogleProvider = user.providerData.some(provider => provider.providerId === 'google.com');
+                    if (hasGoogleProvider) {
+                        await this.updateProfilePictureFromGoogle(user);
+                    }
+                }
+
                 // Check if we need to collect the user's name
                 if (!user.displayName || user.displayName.trim() === '') {
                     try {
@@ -105,6 +113,9 @@ const authModule = {
             const result = await auth.signInWithPopup(provider);
 
             window.RoommatePortal.state.setCurrentUser(result.user);
+
+            // Check if this is an existing email user now signing in with Google
+            await this.updateProfilePictureFromGoogle(result.user);
 
             // Check if we need to collect the user's name
             if (!result.user.displayName || result.user.displayName.trim() === '') {
@@ -293,6 +304,58 @@ const authModule = {
         if (loginModal) {
             loginModal.classList.add('hidden');
             document.body.style.overflow = '';
+        }
+    },
+
+    // Update profile picture from Google if user previously signed up with email
+    async updateProfilePictureFromGoogle(user) {
+        try {
+            const { db } = window.RoommatePortal.config;
+
+            // Only proceed if user has a photo URL from Google and a valid database connection
+            if (!user.photoURL || !db) {
+                return;
+            }
+
+            // Check if user exists in our users collection
+            const userDoc = await db.collection('users').doc(user.uid).get();
+
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+
+                // Update user document with new photo URL
+                await db.collection('users').doc(user.uid).update({
+                    photoURL: user.photoURL
+                });
+
+                // If user is in a household, update their profile picture there too
+                if (userData.householdId) {
+                    const householdDoc = await db.collection('households').doc(userData.householdId).get();
+
+                    if (householdDoc.exists) {
+                        const householdData = householdDoc.data();
+
+                        // Check if user is a member and update their profile picture
+                        if (householdData.memberDetails && householdData.memberDetails[user.uid]) {
+                            await db.collection('households').doc(userData.householdId).update({
+                                [`memberDetails.${user.uid}.photoURL`]: user.photoURL
+                            });
+
+                            // Update local household state if it's the current household
+                            const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+                            if (currentHousehold && currentHousehold.id === userData.householdId) {
+                                currentHousehold.memberDetails[user.uid].photoURL = user.photoURL;
+                                window.RoommatePortal.state.setCurrentHousehold(currentHousehold);
+                            }
+                        }
+                    }
+                }
+
+                console.log('Profile picture updated from Google sign-in');
+            }
+        } catch (error) {
+            console.error('Error updating profile picture from Google:', error);
+            // Don't show user notification for this error as it's not critical to the sign-in flow
         }
     },
 

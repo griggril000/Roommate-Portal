@@ -23,9 +23,14 @@ const householdManagement = {
                         <div>
                             <div class="flex items-center space-x-2">
                                 <p class="font-medium text-gray-800">${member.displayName}</p>
-                                ${uid === currentUser.uid ? `<button onclick="window.RoommatePortal.householdManagement.showEditProfileModal()" class="text-blue-600 hover:text-blue-800 transition-colors p-1" title="Edit your name">
+                                ${uid === currentUser.uid ? `
+                                <button onclick="window.RoommatePortal.householdManagement.showEditProfileModal()" class="text-blue-600 hover:text-blue-800 transition-colors p-1" title="Edit your name">
                                     <i class="fas fa-pencil-alt text-sm"></i>
-                                </button>` : ''}
+                                </button>
+                                <button onclick="window.RoommatePortal.householdManagement.syncProfilePicture()" class="text-green-600 hover:text-green-800 transition-colors p-1" title="Sync profile picture from Google">
+                                    <i class="fas fa-sync-alt text-sm"></i>
+                                </button>
+                                ` : ''}
                             </div>
                             <p class="text-sm text-gray-500">${member.email}</p>
                         </div>
@@ -510,6 +515,50 @@ const householdManagement = {
         } catch (error) {
             console.error('Error updating user name:', error);
             throw error;
+        }
+    },
+
+    // Sync profile picture from Google account
+    async syncProfilePicture() {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+
+        if (!currentUser || !currentHousehold) {
+            window.RoommatePortal.utils.showNotification('❌ Please ensure you are logged in and in a household.');
+            return;
+        }
+
+        try {
+            // Check if user has Google provider and photo URL
+            const hasGoogleProvider = currentUser.providerData?.some(provider => provider.providerId === 'google.com');
+
+            if (!hasGoogleProvider) {
+                window.RoommatePortal.utils.showNotification('ℹ️ This feature requires a Google account. Please link your Google account first.');
+                return;
+            }
+
+            if (!currentUser.photoURL) {
+                window.RoommatePortal.utils.showNotification('ℹ️ No profile picture found in your Google account.');
+                return;
+            }
+
+            // Update using the auth module's function
+            await window.RoommatePortal.auth.updateProfilePictureFromGoogle(currentUser);
+
+            // Force refresh the UI to show the updated picture
+            window.RoommatePortal.ui.updateUIForAuth();
+
+            // Close and reopen the management modal to show updated picture
+            const modal = document.getElementById('householdManagementModal');
+            if (modal) {
+                modal.remove();
+                setTimeout(() => this.showHouseholdManagement(), 100);
+            }
+
+            window.RoommatePortal.utils.showNotification('✅ Profile picture synced from Google!');
+        } catch (error) {
+            console.error('Error syncing profile picture:', error);
+            window.RoommatePortal.utils.showNotification('❌ Failed to sync profile picture. Please try again.');
         }
     }
 };
