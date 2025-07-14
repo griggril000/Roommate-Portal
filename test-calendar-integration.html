@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FullCalendar Integration Test - Roommate Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header similar to main app -->
+    <header class="bg-white shadow-md border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 md:p-3 rounded-lg">
+                    <i class="fas fa-home text-white text-lg md:text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">
+                        Roommate Portal - Calendar Integration Test
+                    </h1>
+                    <p class="text-xs md:text-sm text-gray-600">FullCalendar Implementation</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-4 md:py-8">
+        <!-- Calendar Section -->
+        <section id="calendarSection" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 border border-gray-100">
+                <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-indigo-100 p-3 rounded-xl">
+                            <i class="fas fa-calendar-alt text-indigo-600 text-xl"></i>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Shared Calendar</h2>
+                    </div>
+                    <button class="w-full md:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                    </button>
+                </div>
+
+                <!-- Calendar Notice -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle text-yellow-600 mr-3"></i>
+                        <div>
+                            <h4 class="font-semibold text-yellow-800">FullCalendar Integration</h4>
+                            <p class="text-yellow-700 text-sm">Testing the new FullCalendar implementation with sample data.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Navigation (optional, hidden when FullCalendar is active) -->
+                <div id="customCalendarNavigation" class="flex items-center justify-between mb-6" style="display: none;">
+                    <button id="prevMonthBtn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-chevron-left mr-2"></i>Previous
+                    </button>
+                    <h3 id="currentMonthYear" class="text-xl font-bold text-gray-800">January 2024</h3>
+                    <div class="flex space-x-2">
+                        <button id="todayBtn" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors">
+                            Today
+                        </button>
+                        <button id="nextMonthBtn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                            Next<i class="fas fa-chevron-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FullCalendar Container -->
+                <div id="fullCalendar" class="bg-white rounded-lg"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Day Events Modal (similar to main app) -->
+    <div id="dayEventsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-96 overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="modalDate" class="text-xl font-bold text-gray-800"></h3>
+                    <button onclick="document.getElementById('dayEventsModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div id="modalEventsList">
+                    <!-- Events will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FullCalendar JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script>
+        // Mock data similar to what would come from Firebase
+        const mockEvents = [
+            {
+                id: '1',
+                title: 'House Meeting',
+                start: '2024-01-15T19:00:00',
+                end: '2024-01-15T20:00:00',
+                backgroundColor: '#059669',
+                borderColor: '#047857',
+                textColor: '#ffffff',
+                extendedProps: {
+                    description: 'Monthly house meeting to discuss bills and chores',
+                    location: 'Living Room',
+                    privacy: 'shared',
+                    createdBy: 'user123',
+                    createdByName: 'John Doe'
+                }
+            },
+            {
+                id: '2',
+                title: 'Private Appointment',
+                start: '2024-01-20T10:00:00',
+                end: '2024-01-20T12:00:00',
+                backgroundColor: '#9333ea',
+                borderColor: '#7c3aed',
+                textColor: '#ffffff',
+                extendedProps: {
+                    description: 'Doctor appointment',
+                    location: 'Medical Center',
+                    privacy: 'private',
+                    createdBy: 'user123',
+                    createdByName: 'John Doe'
+                }
+            },
+            {
+                id: '3',
+                title: 'Weekend Cleanup',
+                start: '2024-01-27',
+                allDay: true,
+                backgroundColor: '#059669',
+                borderColor: '#047857',
+                textColor: '#ffffff',
+                extendedProps: {
+                    description: 'Deep cleaning of common areas',
+                    location: 'Entire House',
+                    privacy: 'shared',
+                    createdBy: 'user456',
+                    createdByName: 'Jane Smith'
+                }
+            },
+            {
+                id: '4',
+                title: 'Study Session',
+                start: '2024-01-22T14:00:00',
+                end: '2024-01-22T18:00:00',
+                backgroundColor: '#9333ea',
+                borderColor: '#7c3aed',
+                textColor: '#ffffff',
+                extendedProps: {
+                    description: 'Final exam preparation',
+                    location: 'My room',
+                    privacy: 'private',
+                    createdBy: 'user789',
+                    createdByName: 'Mike Johnson'
+                }
+            }
+        ];
+
+        // Test FullCalendar initialization with Roommate Portal integration
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('fullCalendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                height: 'auto',
+                events: mockEvents,
+                
+                // Callbacks similar to the integration
+                dateClick: function(info) {
+                    console.log('Date clicked:', info.dateStr);
+                    alert('Date clicked: ' + info.dateStr + '\n(In real app: opens add event modal)');
+                },
+                
+                eventClick: function(info) {
+                    console.log('Event clicked:', info.event.title);
+                    showEventDetails(info.event);
+                },
+                
+                eventDidMount: function(info) {
+                    // Add icons for private events and all-day events
+                    const event = info.event;
+                    const element = info.el;
+                    
+                    if (event.extendedProps.privacy === 'private') {
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-lock mr-1';
+                        element.querySelector('.fc-event-title').prepend(icon);
+                    }
+
+                    if (event.allDay) {
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-calendar mr-1';
+                        element.querySelector('.fc-event-title').prepend(icon);
+                    }
+                    
+                    // Add tooltip
+                    let tooltip = event.title;
+                    if (event.extendedProps.description) {
+                        tooltip += ' - ' + event.extendedProps.description;
+                    }
+                    if (event.extendedProps.location) {
+                        tooltip += ' at ' + event.extendedProps.location;
+                    }
+                    if (event.allDay) {
+                        tooltip += ' (All day)';
+                    }
+                    element.title = tooltip;
+                },
+
+                // Mobile responsiveness
+                aspectRatio: window.innerWidth < 768 ? 1.0 : 1.35,
+                dayMaxEvents: 3,
+                moreLinkClick: 'popover',
+            });
+
+            calendar.render();
+
+            // Function to show event details (simulates existing modal)
+            function showEventDetails(event) {
+                const modal = document.getElementById('dayEventsModal');
+                const modalDate = document.getElementById('modalDate');
+                const modalEventsList = document.getElementById('modalEventsList');
+
+                modalDate.textContent = event.start.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
+                modalEventsList.innerHTML = `
+                    <div class="event-item p-4 border rounded-lg mb-3 ${event.extendedProps.privacy === 'private' ? 'border-purple-200 bg-purple-50' : 'border-green-200 bg-green-50'}">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-lg">
+                                <i class="fas ${event.extendedProps.privacy === 'private' ? 'fa-lock' : ''} mr-1"></i>${event.title}
+                            </h4>
+                            <div class="flex space-x-2">
+                                <button class="text-blue-600 hover:text-blue-800" onclick="alert('Edit functionality would be here')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800" onclick="alert('Delete functionality would be here')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 mb-2">
+                            <i class="fas ${event.allDay ? 'fa-calendar' : 'fa-clock'} text-gray-500 mr-1"></i>
+                            ${event.allDay ? 'All day' : event.start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ' - ' + event.end.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                        </p>
+                        ${event.extendedProps.location ? `<p class="text-gray-600 mb-2"><i class="fas fa-map-marker-alt text-gray-500 mr-1"></i>${event.extendedProps.location}</p>` : ''}
+                        ${event.extendedProps.description ? `<p class="text-gray-700">${event.extendedProps.description}</p>` : ''}
+                        <p class="text-sm text-gray-500 mt-2">Created by: ${event.extendedProps.createdByName}</p>
+                    </div>
+                `;
+
+                modal.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

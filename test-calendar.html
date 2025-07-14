@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Test - Roommate Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Calendar Section -->
+        <section id="calendarSection" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 border border-gray-100">
+                <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-indigo-100 p-3 rounded-xl">
+                            <i class="fas fa-calendar-alt text-indigo-600 text-xl"></i>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Shared Calendar (FullCalendar Test)</h2>
+                    </div>
+                </div>
+
+                <!-- FullCalendar Container -->
+                <div id="fullCalendar" class="bg-white rounded-lg"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FullCalendar JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script>
+        // Test FullCalendar initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('fullCalendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                height: 'auto',
+                events: [
+                    {
+                        title: 'Test Event (Shared)',
+                        start: '2024-01-15',
+                        backgroundColor: '#059669',
+                        borderColor: '#047857',
+                    },
+                    {
+                        title: 'Private Event',
+                        start: '2024-01-20T10:00:00',
+                        end: '2024-01-20T12:00:00',
+                        backgroundColor: '#9333ea',
+                        borderColor: '#7c3aed',
+                    }
+                ],
+                
+                dateClick: function(info) {
+                    alert('Date clicked: ' + info.dateStr);
+                },
+                
+                eventClick: function(info) {
+                    alert('Event clicked: ' + info.event.title);
+                }
+            });
+
+            calendar.render();
+        });
+    </script>
+</body>
+</html>

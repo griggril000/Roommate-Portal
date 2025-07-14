@@ -51,6 +51,13 @@ const calendarModule = {
             this.calendar.destroy();
         }
 
+        // Check if FullCalendar is available
+        if (typeof FullCalendar === 'undefined') {
+            console.warn('FullCalendar not loaded, falling back to legacy calendar');
+            this.renderLegacyCalendar();
+            return;
+        }
+
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             headerToolbar: {
@@ -79,6 +86,10 @@ const calendarModule = {
             
             // Theme and styling
             themeSystem: 'standard',
+            
+            // Additional configuration for better mobile experience
+            dayMaxEvents: 3,
+            moreLinkClick: 'popover',
         });
 
         this.calendar.render();
