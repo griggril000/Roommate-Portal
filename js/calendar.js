@@ -57,7 +57,7 @@ const calendarModule = {
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
             },
             height: 'auto',
             navLinks: true,
