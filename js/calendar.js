@@ -188,10 +188,19 @@ const calendarModule = {
 
         // Update event in database
         try {
+            // For all-day events, FullCalendar provides exclusive end dates
+            // but we store inclusive end dates in our database
+            let endDate = event.end || event.start;
+            if (eventData.isAllDay && event.end) {
+                // Subtract one day to convert from exclusive to inclusive
+                endDate = new Date(event.end);
+                endDate.setDate(endDate.getDate() - 1);
+            }
+
             const updatedData = {
                 ...eventData,
                 startDate: window.RoommatePortal.utils.getLocalDateTimeString(event.start),
-                endDate: window.RoommatePortal.utils.getLocalDateTimeString(event.end || event.start)
+                endDate: window.RoommatePortal.utils.getLocalDateTimeString(endDate)
             };
 
             await this.updateEvent(updatedData);
@@ -219,10 +228,19 @@ const calendarModule = {
 
         // Update event in database
         try {
+            // For all-day events, FullCalendar provides exclusive end dates
+            // but we store inclusive end dates in our database
+            let endDate = event.end || event.start;
+            if (eventData.isAllDay && event.end) {
+                // Subtract one day to convert from exclusive to inclusive
+                endDate = new Date(event.end);
+                endDate.setDate(endDate.getDate() - 1);
+            }
+
             const updatedData = {
                 ...eventData,
                 startDate: window.RoommatePortal.utils.getLocalDateTimeString(event.start),
-                endDate: window.RoommatePortal.utils.getLocalDateTimeString(event.end || event.start)
+                endDate: window.RoommatePortal.utils.getLocalDateTimeString(endDate)
             };
 
             await this.updateEvent(updatedData);
@@ -798,11 +816,19 @@ const calendarModule = {
                 const startDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
                 const endDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
+                // For all-day events, FullCalendar expects exclusive end dates
+                // (the end date should be the day after the actual end)
+                let calendarEndDate = endDateTime;
+                if (event.isAllDay) {
+                    calendarEndDate = new Date(endDateTime);
+                    calendarEndDate.setDate(calendarEndDate.getDate() + 1);
+                }
+
                 return {
                     id: event.id,
                     title: event.title,
                     start: startDateTime,
-                    end: endDateTime,
+                    end: calendarEndDate,
                     allDay: event.isAllDay,
                     backgroundColor: event.privacy === 'private' ? '#8b5cf6' : '#10b981',
                     borderColor: event.privacy === 'private' ? '#7c3aed' : '#059669',
