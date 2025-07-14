@@ -1,34 +1,248 @@
 // Roommate Portal - Calendar Management Module
-// Handles calendar events creation, editing, and management
+// Handles calendar events creation, editing, and management with FullCalendar integration
 
 window.RoommatePortal = window.RoommatePortal || {};
 
 const calendarModule = {
     currentDate: new Date(),
     events: [],
+    calendar: null, // FullCalendar instance
 
     // Initialize calendar management
     init() {
         this.setupCalendarForm();
-        this.setupCalendarNavigation();
+        this.setupCustomNavigation();
         this.setupCleanupSchedule();
 
         // Load events if user is already in a household
         if (window.RoommatePortal.state.getCurrentHousehold()) {
             this.loadEvents();
-            this.renderCalendar();
+            this.initializeFullCalendar();
         }
     },
 
     // Refresh calendar when household context changes
     refresh() {
         this.loadEvents();
-        this.renderCalendar();
+        
+        if (this.calendar) {
+            // Update FullCalendar events
+            this.updateCalendarEvents();
+        } else {
+            this.initializeFullCalendar();
+        }
 
         // Trigger cleanup when household changes
         setTimeout(() => {
             this.cleanupOldEvents();
         }, 2000);
+    },
+
+    // Initialize FullCalendar
+    initializeFullCalendar() {
+        const calendarEl = document.getElementById('fullCalendar');
+        if (!calendarEl) {
+            console.error('FullCalendar container not found');
+            return;
+        }
+
+        // Destroy existing calendar if it exists
+        if (this.calendar) {
+            this.calendar.destroy();
+        }
+
+        this.calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            height: 'auto',
+            events: this.getFullCalendarEvents(),
+            
+            // Callbacks
+            dateClick: (info) => {
+                this.handleDateClick(info);
+            },
+            
+            eventClick: (info) => {
+                this.handleEventClick(info);
+            },
+            
+            eventDidMount: (info) => {
+                this.customizeEventRendering(info);
+            },
+
+            // Mobile responsiveness
+            aspectRatio: window.innerWidth < 768 ? 1.0 : 1.35,
+            
+            // Theme and styling
+            themeSystem: 'standard',
+        });
+
+        this.calendar.render();
+        
+        // Hide custom navigation since FullCalendar has its own
+        const customNav = document.getElementById('customCalendarNavigation');
+        if (customNav) {
+            customNav.style.display = 'none';
+        }
+    },
+
+    // Convert events to FullCalendar format
+    getFullCalendarEvents() {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        
+        return this.events.filter(event => {
+            // Filter private events (only show to creator)
+            if (event.privacy === 'private' && event.createdBy !== currentUser?.uid) {
+                return false;
+            }
+            return true;
+        }).map(event => {
+            const startDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const endDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
+
+            return {
+                id: event.id,
+                title: event.title,
+                start: startDateTime,
+                end: endDateTime,
+                allDay: event.isAllDay || false,
+                backgroundColor: event.privacy === 'private' ? '#9333ea' : '#059669',
+                borderColor: event.privacy === 'private' ? '#7c3aed' : '#047857',
+                textColor: '#ffffff',
+                extendedProps: {
+                    description: event.description || '',
+                    location: event.location || '',
+                    privacy: event.privacy,
+                    createdBy: event.createdBy,
+                    createdByName: event.createdByName,
+                    createdAt: event.createdAt,
+                    originalEvent: event
+                }
+            };
+        });
+    },
+
+    // Update FullCalendar events when data changes
+    updateCalendarEvents() {
+        if (!this.calendar) return;
+        
+        const newEvents = this.getFullCalendarEvents();
+        this.calendar.removeAllEvents();
+        this.calendar.addEventSource(newEvents);
+    },
+
+    // Customize event rendering
+    customizeEventRendering(info) {
+        const event = info.event;
+        const element = info.el;
+        
+        // Add private event icon
+        if (event.extendedProps.privacy === 'private') {
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-lock mr-1';
+            element.querySelector('.fc-event-title').prepend(icon);
+        }
+
+        // Add all-day icon
+        if (event.allDay) {
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-calendar mr-1';
+            element.querySelector('.fc-event-title').prepend(icon);
+        }
+        
+        // Add tooltip
+        element.title = this.getEventTooltip(event);
+    },
+
+    // Generate event tooltip
+    getEventTooltip(event) {
+        const props = event.extendedProps;
+        let tooltip = event.title;
+        
+        if (props.description) {
+            tooltip += ' - ' + props.description;
+        }
+        
+        if (props.location) {
+            tooltip += ' at ' + props.location;
+        }
+        
+        if (event.allDay) {
+            tooltip += ' (All day)';
+        }
+        
+        return tooltip;
+    },
+
+    // Handle date click for adding events
+    handleDateClick(info) {
+        // Set the date in the form
+        const dateField = document.getElementById('eventDate');
+        if (dateField) {
+            dateField.value = info.dateStr;
+        }
+
+        // Open add event modal
+        if (window.RoommatePortal.app && window.RoommatePortal.app.openInputModal) {
+            window.RoommatePortal.app.openInputModal('calendar');
+        }
+    },
+
+    // Handle event click for viewing/editing
+    handleEventClick(info) {
+        const event = info.event;
+        const originalEvent = event.extendedProps.originalEvent;
+        
+        if (!originalEvent) return;
+
+        // Get all events for this day to show in modal
+        const clickDate = new Date(event.start);
+        const allDayEvents = this.getEventsForDay(clickDate);
+        this.showDayEvents(clickDate, allDayEvents);
+    },
+
+    // Setup custom navigation (can be hidden or wired to FullCalendar)
+    setupCustomNavigation() {
+        const prevMonthBtn = document.getElementById('prevMonthBtn');
+        const nextMonthBtn = document.getElementById('nextMonthBtn');
+        const todayBtn = document.getElementById('todayBtn');
+
+        if (prevMonthBtn) {
+            prevMonthBtn.addEventListener('click', () => {
+                if (this.calendar) {
+                    this.calendar.prev();
+                } else {
+                    this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+                    this.renderCalendar();
+                }
+            });
+        }
+
+        if (nextMonthBtn) {
+            nextMonthBtn.addEventListener('click', () => {
+                if (this.calendar) {
+                    this.calendar.next();
+                } else {
+                    this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+                    this.renderCalendar();
+                }
+            });
+        }
+
+        if (todayBtn) {
+            todayBtn.addEventListener('click', () => {
+                if (this.calendar) {
+                    this.calendar.today();
+                } else {
+                    this.currentDate = new Date();
+                    this.renderCalendar();
+                }
+            });
+        }
     },
 
     // Setup calendar form event listener
@@ -262,30 +476,8 @@ const calendarModule = {
 
     // Setup calendar navigation
     setupCalendarNavigation() {
-        const prevMonthBtn = document.getElementById('prevMonthBtn');
-        const nextMonthBtn = document.getElementById('nextMonthBtn');
-        const todayBtn = document.getElementById('todayBtn');
-
-        if (prevMonthBtn) {
-            prevMonthBtn.addEventListener('click', () => {
-                this.currentDate.setMonth(this.currentDate.getMonth() - 1);
-                this.renderCalendar();
-            });
-        }
-
-        if (nextMonthBtn) {
-            nextMonthBtn.addEventListener('click', () => {
-                this.currentDate.setMonth(this.currentDate.getMonth() + 1);
-                this.renderCalendar();
-            });
-        }
-
-        if (todayBtn) {
-            todayBtn.addEventListener('click', () => {
-                this.currentDate = new Date();
-                this.renderCalendar();
-            });
-        }
+        // This is now handled by setupCustomNavigation()
+        this.setupCustomNavigation();
     },
 
     // Handle add event form submission
@@ -490,7 +682,13 @@ const calendarModule = {
                 window.RoommatePortal.utils.showNotification('⚠️ Some events could not be decrypted.');
             }
 
-            this.renderCalendar();
+            // Update FullCalendar or render legacy calendar
+            if (this.calendar) {
+                this.updateCalendarEvents();
+            } else {
+                this.renderCalendar();
+            }
+            
             this.updateCalendarStats();
         }, (error) => {
             console.error('Calendar: Error loading events:', error);
@@ -501,8 +699,22 @@ const calendarModule = {
         window.RoommatePortal.state.setEventsListener(eventsListener);
     },
 
-    // Render calendar
+    // Legacy render calendar function (kept for fallback)
     renderCalendar() {
+        // Only render legacy calendar if FullCalendar is not available
+        if (window.FullCalendar && document.getElementById('fullCalendar')) {
+            if (!this.calendar) {
+                this.initializeFullCalendar();
+            }
+            return;
+        }
+
+        // Legacy implementation for fallback
+        this.renderLegacyCalendar();
+    },
+
+    // Legacy calendar rendering (original implementation)
+    renderLegacyCalendar() {
         const calendarGrid = document.getElementById('calendarGrid');
         const currentMonthYear = document.getElementById('currentMonthYear');
 

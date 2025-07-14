@@ -16,6 +16,10 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -318,8 +322,8 @@
                     </div>
                 </div>
 
-                <!-- Calendar Navigation -->
-                <div class="flex items-center justify-between mb-6">
+                <!-- Calendar Navigation (will be integrated with FullCalendar or hidden) -->
+                <div id="customCalendarNavigation" class="flex items-center justify-between mb-6">
                     <button id="prevMonthBtn"
                         class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                         <i class="fas fa-chevron-left mr-2"></i>Previous
@@ -337,8 +341,11 @@
                     </div>
                 </div>
 
-                <!-- Calendar Grid -->
-                <div id="calendarGrid" class="calendar-grid grid grid-cols-7 gap-1 bg-gray-100 p-4 rounded-lg">
+                <!-- FullCalendar Container -->
+                <div id="fullCalendar" class="bg-white rounded-lg"></div>
+
+                <!-- Legacy Calendar Grid (hidden, kept for fallback) -->
+                <div id="calendarGrid" class="calendar-grid grid grid-cols-7 gap-1 bg-gray-100 p-4 rounded-lg hidden">
                     <!-- Calendar days will be dynamically added here -->
                 </div>
             </div>
@@ -521,6 +528,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+    <!-- FullCalendar JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 
     <!-- Modular JavaScript Files -->
     <script src="js/config.js"></script>
