@@ -379,12 +379,12 @@ const calendarModule = {
     },    // Refresh calendar when household context changes
     refresh() {
         this.loadEvents();
-        
+
         // Ensure FullCalendar is rendered properly
         setTimeout(() => {
             this.ensureCalendarRender();
         }, 100);
-        
+
         // Trigger cleanup when household changes
         setTimeout(() => {
             this.cleanupOldEvents();
