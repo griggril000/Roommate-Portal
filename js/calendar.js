@@ -72,7 +72,7 @@ const calendarModule = {
             // More link configuration
             dayMaxEventRows: 3, // Limit to 3 rows of events before showing +more
             moreLinkClick: this.handleMoreLinkClick.bind(this),
-            moreLinkText: function(num) {
+            moreLinkText: function (num) {
                 return `+${num} more`;
             },
 
@@ -367,14 +367,14 @@ const calendarModule = {
     // Handle "+more" link click in month view
     handleMoreLinkClick(arg) {
         console.log('Calendar: More link clicked for date:', arg.date);
-        
+
         // Get all events for this day
         const clickedDate = arg.date;
         const dayEvents = this.getEventsForDay(clickedDate);
-        
+
         // Show day events modal
         this.showDayEventsModal(clickedDate, dayEvents);
-        
+
         // Prevent default FullCalendar popover
         return 'popover';
     },
@@ -385,11 +385,11 @@ const calendarModule = {
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
         modal.style.zIndex = '10000'; // Higher than event details modal
 
-        const dateStr = date.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+        const dateStr = date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
 
         modal.innerHTML = `
@@ -415,25 +415,25 @@ const calendarModule = {
                     ` : `
                         <div class="space-y-3">
                             ${events.map(event => {
-                                const startDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
-                                const endDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
-                                
-                                let timeDisplay;
-                                if (event.isAllDay) {
-                                    timeDisplay = 'All day';
-                                } else {
-                                    const startTime = startDateTime.toLocaleTimeString('en-US', { 
-                                        hour: 'numeric', 
-                                        minute: '2-digit' 
-                                    });
-                                    const endTime = endDateTime.toLocaleTimeString('en-US', { 
-                                        hour: 'numeric', 
-                                        minute: '2-digit' 
-                                    });
-                                    timeDisplay = `${startTime} - ${endTime}`;
-                                }
+            const startDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const endDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
-                                return `
+            let timeDisplay;
+            if (event.isAllDay) {
+                timeDisplay = 'All day';
+            } else {
+                const startTime = startDateTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+                const endTime = endDateTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+                timeDisplay = `${startTime} - ${endTime}`;
+            }
+
+            return `
                                     <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer event-item" 
                                          data-event-id="${event.id}">
                                         <div class="flex items-start justify-between">
@@ -465,7 +465,7 @@ const calendarModule = {
                                         </div>
                                     </div>
                                 `;
-                            }).join('')}
+        }).join('')}
                         </div>
                     `}
                 </div>
@@ -511,7 +511,7 @@ const calendarModule = {
             };
 
             document.body.removeChild(modal);
-            
+
             // Open event creation modal
             if (window.RoommatePortal.app && window.RoommatePortal.app.openInputModal) {
                 window.RoommatePortal.app.openInputModal('calendar');
@@ -1219,28 +1219,28 @@ const calendarModule = {
     getEventsForDay(date) {
         const targetDate = new Date(date);
         targetDate.setHours(0, 0, 0, 0);
-        
+
         return this.events.filter(event => {
             const startDate = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
             const endDate = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
-            
+
             if (event.isAllDay) {
                 // For all-day events, check if the target date falls within the range
                 const eventStart = new Date(startDate);
                 eventStart.setHours(0, 0, 0, 0);
-                
+
                 const eventEnd = new Date(endDate);
                 eventEnd.setHours(0, 0, 0, 0);
-                
+
                 return targetDate >= eventStart && targetDate <= eventEnd;
             } else {
                 // For timed events, check if they occur on this day
                 const eventStartDay = new Date(startDate);
                 eventStartDay.setHours(0, 0, 0, 0);
-                
+
                 const eventEndDay = new Date(endDate);
                 eventEndDay.setHours(0, 0, 0, 0);
-                
+
                 return targetDate >= eventStartDay && targetDate <= eventEndDay;
             }
         });
