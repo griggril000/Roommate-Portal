@@ -66,6 +66,16 @@ const calendarModule = {
             dayMaxEvents: true,
             weekends: true,
 
+            // Now indicator - shows current time line
+            nowIndicator: true,
+
+            // More link configuration
+            dayMaxEventRows: 3, // Limit to 3 rows of events before showing +more
+            moreLinkClick: this.handleMoreLinkClick.bind(this),
+            moreLinkText: function(num) {
+                return `+${num} more`;
+            },
+
             // Event handling
             select: this.handleDateSelect.bind(this),
             eventClick: this.handleEventClick.bind(this),
@@ -350,6 +360,166 @@ const calendarModule = {
                 this.deleteEvent(eventData.id);
             });
         }
+
+        document.body.appendChild(modal);
+    },
+
+    // Handle "+more" link click in month view
+    handleMoreLinkClick(arg) {
+        console.log('Calendar: More link clicked for date:', arg.date);
+        
+        // Get all events for this day
+        const clickedDate = arg.date;
+        const dayEvents = this.getEventsForDay(clickedDate);
+        
+        // Show day events modal
+        this.showDayEventsModal(clickedDate, dayEvents);
+        
+        // Prevent default FullCalendar popover
+        return 'popover';
+    },
+
+    // Show modal with all events for a specific day
+    showDayEventsModal(date, events) {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+        modal.style.zIndex = '10000'; // Higher than event details modal
+
+        const dateStr = date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-calendar-day mr-2"></i>
+                            Events for ${dateStr}
+                        </h3>
+                        <button class="text-gray-400 hover:text-gray-600 close-modal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-y-auto max-h-96 p-6">
+                    ${events.length === 0 ? `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-calendar-times text-3xl mb-3"></i>
+                            <p>No events for this day</p>
+                        </div>
+                    ` : `
+                        <div class="space-y-3">
+                            ${events.map(event => {
+                                const startDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+                                const endDateTime = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
+                                
+                                let timeDisplay;
+                                if (event.isAllDay) {
+                                    timeDisplay = 'All day';
+                                } else {
+                                    const startTime = startDateTime.toLocaleTimeString('en-US', { 
+                                        hour: 'numeric', 
+                                        minute: '2-digit' 
+                                    });
+                                    const endTime = endDateTime.toLocaleTimeString('en-US', { 
+                                        hour: 'numeric', 
+                                        minute: '2-digit' 
+                                    });
+                                    timeDisplay = `${startTime} - ${endTime}`;
+                                }
+
+                                return `
+                                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer event-item" 
+                                         data-event-id="${event.id}">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex-1">
+                                                <div class="flex items-center mb-1">
+                                                    <div class="w-3 h-3 rounded-full mr-2" 
+                                                         style="background-color: ${event.privacy === 'private' ? '#8b5cf6' : '#10b981'}"></div>
+                                                    <h4 class="font-medium text-gray-900">
+                                                        ${event.privacy === 'private' ? '<i class="fas fa-lock mr-1"></i>' : ''}
+                                                        ${window.RoommatePortal.utils.escapeHtml(event.title)}
+                                                    </h4>
+                                                </div>
+                                                <p class="text-sm text-gray-600 mb-1">
+                                                    <i class="fas fa-clock mr-1"></i>
+                                                    ${timeDisplay}
+                                                </p>
+                                                ${event.location ? `
+                                                    <p class="text-sm text-gray-600 mb-1">
+                                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                                        ${window.RoommatePortal.utils.escapeHtml(event.location)}
+                                                    </p>
+                                                ` : ''}
+                                                ${event.description ? `
+                                                    <p class="text-sm text-gray-500 mt-2">
+                                                        ${window.RoommatePortal.utils.escapeHtml(event.description)}
+                                                    </p>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+                
+                <div class="p-6 border-t border-gray-200 bg-gray-50">
+                    <button class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 add-event-btn">
+                        <i class="fas fa-plus mr-2"></i>Add Event for This Day
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+
+        // Handle event item clicks
+        modal.querySelectorAll('.event-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const eventId = item.dataset.eventId;
+                const eventData = this.events.find(e => e.id === eventId);
+                if (eventData) {
+                    document.body.removeChild(modal);
+                    this.showEventDetails(eventData);
+                }
+            });
+        });
+
+        // Handle add event button
+        modal.querySelector('.add-event-btn').addEventListener('click', () => {
+            // Pre-select this date for new event
+            this.selectedDateInfo = {
+                start: date,
+                end: date,
+                allDay: true
+            };
+
+            document.body.removeChild(modal);
+            
+            // Open event creation modal
+            if (window.RoommatePortal.app && window.RoommatePortal.app.openInputModal) {
+                window.RoommatePortal.app.openInputModal('calendar');
+                setTimeout(() => {
+                    this.populateFormWithSelection();
+                }, 250);
+            }
+        });
 
         document.body.appendChild(modal);
     },
@@ -1047,25 +1217,33 @@ const calendarModule = {
 
     // Get events for a specific day
     getEventsForDay(date) {
-        const currentUser = window.RoommatePortal.state.getCurrentUser();
-
-        const filteredEvents = this.events.filter(event => {
-            const eventStart = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
-            const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
-
-            // Check if event occurs on this day
-            const eventOnDay = eventStart.toDateString() === date.toDateString() ||
-                (eventStart <= date && eventEnd >= date);
-
-            // Filter private events (only show to creator)
-            if (event.privacy === 'private' && event.createdBy !== currentUser?.uid) {
-                return false;
+        const targetDate = new Date(date);
+        targetDate.setHours(0, 0, 0, 0);
+        
+        return this.events.filter(event => {
+            const startDate = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
+            const endDate = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
+            
+            if (event.isAllDay) {
+                // For all-day events, check if the target date falls within the range
+                const eventStart = new Date(startDate);
+                eventStart.setHours(0, 0, 0, 0);
+                
+                const eventEnd = new Date(endDate);
+                eventEnd.setHours(0, 0, 0, 0);
+                
+                return targetDate >= eventStart && targetDate <= eventEnd;
+            } else {
+                // For timed events, check if they occur on this day
+                const eventStartDay = new Date(startDate);
+                eventStartDay.setHours(0, 0, 0, 0);
+                
+                const eventEndDay = new Date(endDate);
+                eventEndDay.setHours(0, 0, 0, 0);
+                
+                return targetDate >= eventStartDay && targetDate <= eventEndDay;
             }
-
-            return eventOnDay;
         });
-
-        return filteredEvents;
     },
 
     // Get single-day events for a specific day (excludes multi-day events)
