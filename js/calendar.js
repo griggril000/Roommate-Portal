@@ -36,7 +36,6 @@ const calendarModule = {
     // Ensure calendar renders properly when made visible
     ensureCalendarRender() {
         if (this.calendar) {
-            console.log('Calendar: Re-rendering calendar for proper display');
             // Update size to trigger proper rendering
             this.calendar.updateSize();
             // Re-render to ensure proper display
