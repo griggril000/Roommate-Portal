@@ -117,6 +117,7 @@ const calendarModule = {
 
             // Populate form after a delay to ensure modal is loaded
             setTimeout(() => {
+                console.log('Calendar: Attempting to populate form with selection:', this.selectedDateInfo);
                 this.populateFormWithSelection();
             }, 250);
         }
@@ -127,7 +128,6 @@ const calendarModule = {
 
     // Handle event click for editing/viewing
     handleEventClick(clickInfo) {
-        console.log('Calendar: Event clicked:', clickInfo.event);
 
         const event = clickInfo.event;
         const eventData = this.events.find(e => e.id === event.id);
@@ -341,11 +341,25 @@ const calendarModule = {
 
         const container = document.querySelector('.input-modal') || document;
 
-        const dateField = container.querySelector('#eventDate');
-        const endDateField = container.querySelector('#eventEndDate');
-        const allDayField = container.querySelector('#eventAllDay');
-        const timeField = container.querySelector('#eventTime');
-        const endTimeField = container.querySelector('#eventEndTime');
+        // For modal forms, IDs are removed, so we need to find fields by type and data attributes
+        const dateField = container.querySelector('#eventDate') ||
+            container.querySelector('input[data-field="start-date"]') ||
+            container.querySelector('input[type="date"]');
+
+        const endDateField = container.querySelector('#eventEndDate') ||
+            container.querySelector('input[data-field="end-date"]') ||
+            container.querySelectorAll('input[type="date"]')[1];
+
+        const allDayField = container.querySelector('#eventAllDay') ||
+            container.querySelector('input[type="checkbox"]');
+
+        const timeField = container.querySelector('#eventTime') ||
+            container.querySelector('input[data-field="start-time"]') ||
+            container.querySelector('input[type="time"]');
+
+        const endTimeField = container.querySelector('#eventEndTime') ||
+            container.querySelector('input[data-field="end-time"]') ||
+            container.querySelectorAll('input[type="time"]')[1];
 
         if (dateField) {
             dateField.value = window.RoommatePortal.utils.getLocalDateString(this.selectedDateInfo.start);
@@ -363,6 +377,17 @@ const calendarModule = {
         if (allDayField) {
             allDayField.checked = this.selectedDateInfo.allDay;
             this.toggleAllDayFieldsInContainer(container);
+
+            // For modal forms, also trigger the modal's toggle function
+            if (container.classList.contains('input-modal') || container.querySelector('.input-modal')) {
+                // Use a small delay to ensure the field is set
+                setTimeout(() => {
+                    if (window.RoommatePortal.app && window.RoommatePortal.app.toggleAllDayFieldsInModal) {
+                        const modalForm = container.querySelector('form') || container;
+                        window.RoommatePortal.app.toggleAllDayFieldsInModal(modalForm, this.selectedDateInfo.allDay);
+                    }
+                }, 50);
+            }
         }
 
         if (!this.selectedDateInfo.allDay && timeField) {
@@ -468,19 +493,44 @@ const calendarModule = {
 
         const isAllDay = allDayCheckbox.checked;
 
-        // Find time containers within this container
+        // Find time containers within this container - look for containers with time inputs
+        const timeInputs = container.querySelectorAll('input[type="time"]');
+        const timeContainers = [];
+
+        timeInputs.forEach(timeInput => {
+            // Look for parent container that includes the label and input
+            let timeContainer = timeInput.parentElement;
+            if (timeContainer) {
+                timeContainers.push(timeContainer);
+            }
+        });
+
+        // Also try finding by IDs for non-modal forms
         const startTimeContainer = container.querySelector('#startTimeContainer');
         const endTimeContainer = container.querySelector('#endTimeContainer');
-        const timeField = container.querySelector('#eventTime');
-        const endTimeField = container.querySelector('#eventEndTime');
+
+        if (startTimeContainer && !timeContainers.includes(startTimeContainer)) {
+            timeContainers.push(startTimeContainer);
+        }
+        if (endTimeContainer && !timeContainers.includes(endTimeContainer)) {
+            timeContainers.push(endTimeContainer);
+        }
+
+        // Find time fields by multiple methods
+        const timeField = container.querySelector('#eventTime') ||
+            container.querySelector('input[data-field="start-time"]') ||
+            container.querySelector('input[type="time"]');
+
+        const endTimeField = container.querySelector('#eventEndTime') ||
+            container.querySelector('input[data-field="end-time"]') ||
+            container.querySelectorAll('input[type="time"]')[1];
 
         // Hide/show time containers
-        if (startTimeContainer) {
-            startTimeContainer.style.display = isAllDay ? 'none' : '';
-        }
-        if (endTimeContainer) {
-            endTimeContainer.style.display = isAllDay ? 'none' : '';
-        }
+        timeContainers.forEach(timeContainer => {
+            if (timeContainer) {
+                timeContainer.style.display = isAllDay ? 'none' : '';
+            }
+        });
 
         // Handle time field requirements and values
         if (timeField) {
@@ -498,6 +548,22 @@ const calendarModule = {
             } else {
                 endTimeField.setAttribute('required', 'required');
             }
+        }
+
+        // For modal forms, also handle grid layout adjustments
+        if (container.classList.contains('input-modal') || container.querySelector('.input-modal')) {
+            const gridContainers = container.querySelectorAll('.grid');
+            const relevantGridContainers = Array.from(gridContainers).filter(grid => {
+                return grid.className.includes('grid-cols-') && !grid.classList.contains('form-container');
+            });
+
+            relevantGridContainers.forEach(gridContainer => {
+                if (isAllDay) {
+                    gridContainer.className = 'grid grid-cols-1 gap-4';
+                } else {
+                    gridContainer.className = 'grid grid-cols-2 gap-4';
+                }
+            });
         }
     },
 
@@ -1037,16 +1103,40 @@ const calendarModule = {
     populateFormElements(container) {
         if (!this.editingEventData) return;
 
-        const titleField = container.querySelector('#eventTitle');
-        const descriptionField = container.querySelector('#eventDescription');
-        const locationField = container.querySelector('#eventLocation');
-        const allDayField = container.querySelector('#eventAllDay');
-        const privacyField = container.querySelector('#eventPrivacy');
-        const dateField = container.querySelector('#eventDate');
-        const timeField = container.querySelector('#eventTime');
-        const endDateField = container.querySelector('#eventEndDate');
-        const endTimeField = container.querySelector('#eventEndTime');
-        const form = container.querySelector('#addEventForm');
+        // Find form fields by multiple methods (ID, data attribute, type)
+        const titleField = container.querySelector('#eventTitle') ||
+            container.querySelector('input[type="text"]');
+
+        const descriptionField = container.querySelector('#eventDescription') ||
+            container.querySelector('textarea');
+
+        const locationField = container.querySelector('#eventLocation') ||
+            container.querySelectorAll('input[type="text"]')[1];
+
+        const allDayField = container.querySelector('#eventAllDay') ||
+            container.querySelector('input[type="checkbox"]');
+
+        const privacyField = container.querySelector('#eventPrivacy') ||
+            container.querySelector('select');
+
+        const dateField = container.querySelector('#eventDate') ||
+            container.querySelector('input[data-field="start-date"]') ||
+            container.querySelector('input[type="date"]');
+
+        const timeField = container.querySelector('#eventTime') ||
+            container.querySelector('input[data-field="start-time"]') ||
+            container.querySelector('input[type="time"]');
+
+        const endDateField = container.querySelector('#eventEndDate') ||
+            container.querySelector('input[data-field="end-date"]') ||
+            container.querySelectorAll('input[type="date"]')[1];
+
+        const endTimeField = container.querySelector('#eventEndTime') ||
+            container.querySelector('input[data-field="end-time"]') ||
+            container.querySelectorAll('input[type="time"]')[1];
+
+        const form = container.querySelector('#addEventForm') ||
+            container.querySelector('form');
 
         if (titleField) {
             titleField.value = this.editingEventData.title;
