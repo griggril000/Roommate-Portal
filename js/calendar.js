@@ -7,6 +7,7 @@ const calendarModule = {
     calendar: null,
     events: [],
     editingEventData: null,
+    updateCalendarTimeout: null,
 
     // Initialize calendar management
     init() {
@@ -769,25 +770,78 @@ const calendarModule = {
 
         // Set up real-time listener
         const eventsListener = eventsCollection.orderBy('startDate', 'asc').onSnapshot(async (snapshot) => {
-            this.events = [];
-            const eventsList = [];
-            snapshot.forEach((doc) => {
-                const eventData = { ...doc.data(), id: doc.id };
-                eventsList.push(eventData);
-            });
+            // Process document changes more efficiently
+            const changes = snapshot.docChanges();
+            let hasChanges = false;
 
-            // Decrypt event data
-            try {
-                this.events = await window.RoommatePortal.encryption.decryptDataArray(eventsList, ['title', 'description', 'location']);
-            } catch (error) {
-                console.error('Error decrypting events:', error);
-                this.events = eventsList; // Use original data if decryption fails
-                window.RoommatePortal.utils.showNotification('⚠️ Some events could not be decrypted.');
+            // If it's the initial load, process all documents
+            if (this.events.length === 0 || changes.length === snapshot.size) {
+                const eventsList = [];
+                snapshot.forEach((doc) => {
+                    const eventData = { ...doc.data(), id: doc.id };
+                    eventsList.push(eventData);
+                });
+
+                // Decrypt event data
+                try {
+                    this.events = await window.RoommatePortal.encryption.decryptDataArray(eventsList, ['title', 'description', 'location']);
+                    hasChanges = true;
+                } catch (error) {
+                    console.error('Error decrypting events:', error);
+                    this.events = eventsList; // Use original data if decryption fails
+                    window.RoommatePortal.utils.showNotification('⚠️ Some events could not be decrypted.');
+                    hasChanges = true;
+                }
+            } else {
+                // Process incremental changes for better performance
+                for (const change of changes) {
+                    const eventData = { ...change.doc.data(), id: change.doc.id };
+
+                    if (change.type === 'added') {
+                        try {
+                            const decryptedEvent = await window.RoommatePortal.encryption.decryptDataArray([eventData], ['title', 'description', 'location']);
+                            this.events.push(decryptedEvent[0]);
+                            hasChanges = true;
+                        } catch (error) {
+                            console.error('Error decrypting new event:', error);
+                            this.events.push(eventData);
+                            hasChanges = true;
+                        }
+                    } else if (change.type === 'modified') {
+                        try {
+                            const decryptedEvent = await window.RoommatePortal.encryption.decryptDataArray([eventData], ['title', 'description', 'location']);
+                            const index = this.events.findIndex(e => e.id === eventData.id);
+                            if (index !== -1) {
+                                this.events[index] = decryptedEvent[0];
+                                hasChanges = true;
+                            }
+                        } catch (error) {
+                            console.error('Error decrypting modified event:', error);
+                            const index = this.events.findIndex(e => e.id === eventData.id);
+                            if (index !== -1) {
+                                this.events[index] = eventData;
+                                hasChanges = true;
+                            }
+                        }
+                    } else if (change.type === 'removed') {
+                        const index = this.events.findIndex(e => e.id === eventData.id);
+                        if (index !== -1) {
+                            this.events.splice(index, 1);
+                            hasChanges = true;
+                        }
+                    }
+                }
             }
 
-            // Update FullCalendar with new events
-            this.updateCalendarEvents();
-            this.updateCalendarStats();
+            // Only update UI if there were actual changes
+            if (hasChanges) {
+                // Debounce UI updates to prevent excessive re-rendering
+                clearTimeout(this.updateCalendarTimeout);
+                this.updateCalendarTimeout = setTimeout(() => {
+                    this.updateCalendarEvents();
+                    this.updateCalendarStats();
+                }, 100);
+            }
         }, (error) => {
             console.error('Calendar: Error loading events:', error);
             window.RoommatePortal.utils.showNotification('❌ Error loading calendar events. Please refresh the page.');
@@ -843,9 +897,27 @@ const calendarModule = {
                 };
             });
 
-        // Update calendar events
-        this.calendar.removeAllEvents();
-        this.calendar.addEventSource(calendarEvents);
+        // More efficient event updating - only replace if events have actually changed
+        const currentEvents = this.calendar.getEvents();
+
+        // Quick check if we need to update (compare event count and IDs)
+        const needsUpdate = currentEvents.length !== calendarEvents.length ||
+            !calendarEvents.every(newEvent =>
+                currentEvents.some(currentEvent => currentEvent.id === newEvent.id)
+            );
+
+        if (needsUpdate) {
+            // Use refetchEvents if we have an event source, otherwise replace all
+            const eventSources = this.calendar.getEventSources();
+            if (eventSources.length > 0) {
+                // Remove existing sources and add new one
+                eventSources.forEach(source => source.remove());
+            }
+
+            // Add events directly (more efficient than removeAllEvents + addEventSource)
+            this.calendar.removeAllEvents();
+            this.calendar.addEventSource(calendarEvents);
+        }
     },
 
     // Render calendar
@@ -1241,38 +1313,47 @@ const calendarModule = {
         this.updateFormButtonText(document, false);
     },
 
-    // Update calendar statistics
+    // Update calendar statistics (optimized)
     updateCalendarStats() {
         const currentUser = window.RoommatePortal.state.getCurrentUser();
+        if (!currentUser) return;
+
         const now = new Date();
         const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        // Count upcoming events (next 7 days)
-        const upcomingEvents = this.events.filter(event => {
+        // Cache parsed dates and filter in one pass for better performance
+        let upcomingCount = 0;
+
+        for (const event of this.events) {
+            // Skip private events not owned by current user
+            if (event.privacy === 'private' && event.createdBy !== currentUser.uid) {
+                continue;
+            }
+
+            // Parse dates only once per event
             const eventStart = window.RoommatePortal.utils.parseLocalDateTimeString(event.startDate);
             const eventEnd = window.RoommatePortal.utils.parseLocalDateTimeString(event.endDate);
 
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime())) {
+                continue; // Skip invalid dates
+            }
+
             const eventStartDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
 
             const startsInFuture = eventStart > now && eventStart <= nextWeek;
             const isCurrentlyOngoing = eventStart <= now && eventEnd >= now;
             const startsToday = eventStartDate.getTime() === today.getTime();
 
-            const eventInRange = startsInFuture || isCurrentlyOngoing || startsToday;
-
-            // Filter private events
-            if (event.privacy === 'private' && event.createdBy !== currentUser?.uid) {
-                return false;
+            if (startsInFuture || isCurrentlyOngoing || startsToday) {
+                upcomingCount++;
             }
+        }
 
-            return eventInRange;
-        });
-
-        // Update dashboard tile
+        // Update dashboard tile only if it exists
         const upcomingEventsCount = document.getElementById('upcomingEventsCount');
         if (upcomingEventsCount) {
-            upcomingEventsCount.textContent = upcomingEvents.length;
+            upcomingEventsCount.textContent = upcomingCount;
         }
     },
 
@@ -1374,6 +1455,23 @@ const calendarModule = {
                 submitButton.innerHTML = '<i class="fas fa-calendar-plus mr-2"></i>Add Event';
             }
         }
+    },
+
+    // Clean up resources when module is destroyed
+    cleanup() {
+        // Clear any pending timeouts
+        if (this.updateCalendarTimeout) {
+            clearTimeout(this.updateCalendarTimeout);
+            this.updateCalendarTimeout = null;
+        }
+
+        // Clear events and reset state
+        if (this.calendar) {
+            this.calendar.removeAllEvents();
+        }
+
+        this.events = [];
+        this.editingEventData = null;
     },
 };
 
