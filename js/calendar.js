@@ -1743,6 +1743,10 @@ const calendarModule = {
                             <input type="url" placeholder="https://example.com/calendar.ics"
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
                                           focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Note: Google Calendar URLs cannot be imported directly due to CORS restrictions. 
+                                Please download the .ics file and use the file upload option instead.
+                            </p>
                         </div>
 
                         <div>
@@ -1859,6 +1863,12 @@ const calendarModule = {
     async fetchICalUrl(url) {
         try {
             console.log('Fetching iCal from URL:', url);
+
+            // Check if it's a Google Calendar URL
+            if (url.includes('calendar.google.com')) {
+                throw new Error('Google Calendar URLs cannot be accessed directly due to CORS restrictions. Please download the .ics file and upload it instead.');
+            }
+
             const response = await fetch(url);
             console.log('Response status:', response.status, response.statusText);
 
@@ -1872,7 +1882,15 @@ const calendarModule = {
             return data;
         } catch (error) {
             console.error('Error fetching URL:', error);
-            throw new Error('Error fetching calendar URL: ' + error.message);
+
+            // Provide specific guidance based on error type
+            if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                throw new Error('This URL cannot be accessed directly due to CORS restrictions. Please download the .ics file and upload it instead.');
+            } else if (error.message.includes('Google Calendar')) {
+                throw new Error(error.message);
+            } else {
+                throw new Error('Error fetching calendar URL: ' + error.message);
+            }
         }
     },
 
