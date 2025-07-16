@@ -1661,10 +1661,17 @@ const calendarModule = {
                     // Check if button already exists
                     if (!sectionHeader.querySelector('.ical-import-btn')) {
                         const importButton = document.createElement('button');
-                        importButton.className = 'ical-import-btn px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm';
+                        importButton.className = 'ical-import-btn px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm mr-2';
                         importButton.innerHTML = '<i class="fas fa-file-import mr-2"></i>Import iCal';
                         importButton.onclick = () => this.showICalImportModal();
-                        sectionHeader.appendChild(importButton);
+
+                        // Insert before the "Back to Dashboard" button
+                        const backButton = sectionHeader.querySelector('#backToDashboardFromCalendar');
+                        if (backButton) {
+                            sectionHeader.insertBefore(importButton, backButton);
+                        } else {
+                            sectionHeader.appendChild(importButton);
+                        }
                         return true;
                     }
                 }
