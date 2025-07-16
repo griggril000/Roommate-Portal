@@ -262,32 +262,34 @@ const choresModule = {
                 </span>` : '';
 
             choreElement.innerHTML = `
-                <div class="flex items-start justify-between">
-                    <div class="flex items-start space-x-4 flex-1">
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between">
+                    <div class="flex items-start space-x-4 flex-1 min-w-0">
                         <input type="checkbox" ${chore.completed ? 'checked' : ''} 
                                onchange="window.RoommatePortal.chores.toggleChore('${chore.id}')" 
-                               class="custom-checkbox mt-1">
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-2">
-                                <span class="${chore.completed ? 'line-through text-gray-500' : 'text-gray-800'} font-semibold text-lg">
+                               class="custom-checkbox mt-1 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-2">
+                                <span class="${chore.completed ? 'line-through text-gray-500' : 'text-gray-800'} font-semibold text-base sm:text-lg break-words">
                                     ${priorityIcon} ${chore.text}
                                 </span>
-                                <span class="chore-assignee">${chore.assignee}</span>
-                                ${pointsDisplay}
-                                ${isFormerMemberChore ? '<span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">Legacy</span>' : ''}
+                                <div class="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                                    <span class="chore-assignee">${chore.assignee}</span>
+                                    ${pointsDisplay}
+                                    ${isFormerMemberChore ? '<span class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">Legacy</span>' : ''}
+                                </div>
                             </div>
-                            <div class="chore-date">
+                            <div class="chore-date text-sm">
                                 📅 Added: ${chore.dateAdded} • Created by: <span class="font-medium">${createdByName}</span>
                                 ${chore.completed ? ` | ✅ Completed: ${chore.completedDate || new Date().toLocaleDateString()}` : ''}
                                 ${chore.completed && completedByName ? ` • by: <span class="font-medium">${completedByName}</span>` : ''}
                             </div>
                         </div>
                     </div>
-                    <div class="flex space-x-2 ml-4">
-                        ${!chore.completed ? `<button onclick="window.RoommatePortal.chores.markComplete('${chore.id}')" class="btn-complete">
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-4 md:mt-0 md:ml-4">
+                        ${!chore.completed ? `<button onclick="window.RoommatePortal.chores.markComplete('${chore.id}')" class="btn-complete w-full sm:w-auto">
                             <i class="fas fa-check mr-1"></i>Complete
                         </button>` : ''}
-                        <button onclick="window.RoommatePortal.chores.deleteChore('${chore.id}')" class="btn-delete">
+                        <button onclick="window.RoommatePortal.chores.deleteChore('${chore.id}')" class="btn-delete w-full sm:w-auto">
                             <i class="fas fa-trash mr-1"></i>Delete
                         </button>
                     </div>
