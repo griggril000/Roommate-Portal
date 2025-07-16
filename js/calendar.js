@@ -15,6 +15,7 @@ const calendarModule = {
         this.setupCleanupSchedule();
         this.initializeFullCalendar();
         this.setupTabSwitchListener();
+        this.setupICalImport();
 
         // Load events if user is already in a household
         if (window.RoommatePortal.state.getCurrentHousehold()) {
@@ -29,6 +30,8 @@ const calendarModule = {
                 // Calendar tab became visible - re-render the calendar
                 setTimeout(() => {
                     this.ensureCalendarRender();
+                    // Also ensure import button is added
+                    this.setupICalImport();
                 }, 100); // Small delay to ensure the tab is fully visible
             }
         });
@@ -1632,6 +1635,394 @@ const calendarModule = {
             } else {
                 submitButton.innerHTML = '<i class="fas fa-calendar-plus mr-2"></i>Add Event';
             }
+        }
+    },
+
+    // Setup iCal import functionality
+    setupICalImport() {
+        // Try to add import button to calendar header with retry logic
+        const addImportButton = () => {
+            // First try the FullCalendar toolbar
+            const calendarHeader = document.querySelector('.fc-header-toolbar .fc-right');
+            if (calendarHeader) {
+                const importButton = document.createElement('button');
+                importButton.className = 'fc-button fc-button-primary';
+                importButton.innerHTML = '<i class="fas fa-file-import mr-1"></i>Import iCal';
+                importButton.onclick = () => this.showICalImportModal();
+                calendarHeader.appendChild(importButton);
+                return true;
+            }
+
+            // Fallback: Add button to calendar section header
+            const calendarSection = document.getElementById('calendarSection');
+            if (calendarSection) {
+                const sectionHeader = calendarSection.querySelector('.flex.flex-col.space-y-4.md\\:flex-row.md\\:items-center.md\\:justify-between.md\\:space-y-0');
+                if (sectionHeader) {
+                    // Check if button already exists
+                    if (!sectionHeader.querySelector('.ical-import-btn')) {
+                        const importButton = document.createElement('button');
+                        importButton.className = 'ical-import-btn px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm';
+                        importButton.innerHTML = '<i class="fas fa-file-import mr-2"></i>Import iCal';
+                        importButton.onclick = () => this.showICalImportModal();
+                        sectionHeader.appendChild(importButton);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        // Try immediately
+        if (!addImportButton()) {
+            // If not available, retry after a delay
+            setTimeout(() => {
+                if (!addImportButton()) {
+                    // Final retry after calendar is fully loaded
+                    setTimeout(addImportButton, 1000);
+                }
+            }, 500);
+        }
+    },
+
+    // Show iCal import modal
+    showICalImportModal() {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+        modal.style.zIndex = '9999';
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-file-import mr-2"></i>
+                            Import Calendar Events
+                        </h3>
+                        <button class="text-gray-400 hover:text-gray-600 close-modal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Import Method
+                            </label>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="radio" name="importMethod" value="file" checked
+                                           class="text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                    <span class="ml-2">Upload iCal File</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="importMethod" value="url"
+                                           class="text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                    <span class="ml-2">Import from URL</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="fileImportSection">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Select iCal File (.ics)
+                            </label>
+                            <input type="file" accept=".ics"
+                                   class="block w-full text-sm text-gray-500
+                                          file:mr-4 file:py-2 file:px-4
+                                          file:rounded-full file:border-0
+                                          file:text-sm file:font-semibold
+                                          file:bg-blue-50 file:text-blue-700
+                                          hover:file:bg-blue-100">
+                        </div>
+
+                        <div id="urlImportSection" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Calendar URL
+                            </label>
+                            <input type="url" placeholder="https://example.com/calendar.ics"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                                          focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Import Options
+                            </label>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="importPrivate" checked
+                                           class="text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                    <span class="ml-2">Import as private events</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="includePastEvents"
+                                           class="text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                    <span class="ml-2">Include past events</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <button class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 import-events">
+                            <i class="fas fa-file-import mr-2"></i>Import Events
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+
+        // Toggle between file and URL import sections
+        const importMethodRadios = modal.querySelectorAll('input[name="importMethod"]');
+        const fileSection = modal.querySelector('#fileImportSection');
+        const urlSection = modal.querySelector('#urlImportSection');
+
+        importMethodRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'file') {
+                    fileSection.classList.remove('hidden');
+                    urlSection.classList.add('hidden');
+                } else {
+                    fileSection.classList.add('hidden');
+                    urlSection.classList.remove('hidden');
+                }
+            });
+        });
+
+        // Handle import button click
+        modal.querySelector('.import-events').addEventListener('click', async () => {
+            const importMethod = modal.querySelector('input[name="importMethod"]:checked').value;
+            const importPrivate = modal.querySelector('input[name="importPrivate"]').checked;
+            const includePastEvents = modal.querySelector('input[name="includePastEvents"]').checked;
+
+            try {
+                let icalData;
+                if (importMethod === 'file') {
+                    const fileInput = modal.querySelector('input[type="file"]');
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        throw new Error('Please select a file to import');
+                    }
+                    icalData = await this.readICalFile(file);
+                } else {
+                    const urlInput = modal.querySelector('input[type="url"]');
+                    const url = urlInput.value.trim();
+                    if (!url) {
+                        throw new Error('Please enter a valid URL');
+                    }
+                    icalData = await this.fetchICalUrl(url);
+                }
+
+                await this.processICalData(icalData, importPrivate, includePastEvents);
+                window.RoommatePortal.utils.showNotification('✅ Calendar events imported successfully!');
+                document.body.removeChild(modal);
+            } catch (error) {
+                console.error('Error importing events:', error);
+                window.RoommatePortal.utils.showNotification(`❌ ${error.message || 'Error importing events'}`);
+            }
+        });
+
+        document.body.appendChild(modal);
+    },
+
+    // Read iCal file
+    async readICalFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = e.target.result;
+                console.log('File read successfully. Size:', data.length, 'characters');
+                console.log('File content preview:', data.substring(0, 300) + '...');
+                resolve(data);
+            };
+            reader.onerror = (e) => {
+                console.error('Error reading file:', e);
+                reject(new Error('Error reading file'));
+            };
+            reader.readAsText(file);
+        });
+    },
+
+    // Fetch iCal from URL
+    async fetchICalUrl(url) {
+        try {
+            console.log('Fetching iCal from URL:', url);
+            const response = await fetch(url);
+            console.log('Response status:', response.status, response.statusText);
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch calendar data: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.text();
+            console.log('URL data fetched successfully. Size:', data.length, 'characters');
+            console.log('URL content preview:', data.substring(0, 300) + '...');
+            return data;
+        } catch (error) {
+            console.error('Error fetching URL:', error);
+            throw new Error('Error fetching calendar URL: ' + error.message);
+        }
+    },
+
+    // Process iCal data and import events
+    async processICalData(icalData, importAsPrivate, includePastEvents = false) {
+        const currentUser = window.RoommatePortal.state.getCurrentUser();
+        const currentHousehold = window.RoommatePortal.state.getCurrentHousehold();
+
+        if (!currentUser || !currentHousehold) {
+            throw new Error('You must be in a household to import events');
+        }
+
+        console.log('Processing iCal data:', icalData.substring(0, 200) + '...');
+        console.log('Import options:', { importAsPrivate, includePastEvents });
+
+        try {
+            // Check if ICAL library is available
+            if (typeof ICAL === 'undefined') {
+                throw new Error('ICAL library not loaded. Please refresh the page and try again.');
+            }
+
+            // Parse iCal data using ical.js library
+            console.log('Parsing iCal data with ICAL.parse...');
+            const jcalData = ICAL.parse(icalData);
+            console.log('JCAL data parsed:', jcalData);
+
+            const comp = new ICAL.Component(jcalData);
+            const vevents = comp.getAllSubcomponents('vevent');
+            console.log('Found', vevents.length, 'events in iCal data');
+
+            const importedEvents = [];
+            const errors = [];
+            const skippedPastEvents = [];
+
+            for (let i = 0; i < vevents.length; i++) {
+                try {
+                    const vevent = vevents[i];
+                    console.log(`Processing event ${i + 1}/${vevents.length}`);
+
+                    const event = new ICAL.Event(vevent);
+                    console.log('Event parsed:', {
+                        summary: event.summary,
+                        startDate: event.startDate,
+                        endDate: event.endDate,
+                        description: event.description,
+                        location: event.location
+                    });
+
+                    // Convert to local date strings
+                    const startDate = event.startDate.toJSDate();
+                    const endDate = event.endDate ? event.endDate.toJSDate() : startDate;
+
+                    console.log('Converted dates:', { startDate, endDate });
+                    console.log('Current date:', new Date());
+                    console.log('Is endDate in the past?', endDate < new Date());
+
+                    // Skip past events (events that have already ended) unless includePastEvents is true
+                    const now = new Date();
+                    if (endDate < now && !includePastEvents) {
+                        console.log('Skipping past event:', event.summary, '(ended on', endDate.toLocaleString(), ')');
+                        skippedPastEvents.push({
+                            title: event.summary || 'Untitled',
+                            endDate: endDate.toLocaleString()
+                        });
+                        continue;
+                    }
+
+                    // Prepare event data
+                    const eventData = {
+                        id: Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                        title: event.summary || 'Imported Event',
+                        description: event.description || '',
+                        location: event.location || '',
+                        startDate: window.RoommatePortal.utils.getLocalDateTimeString(startDate),
+                        endDate: window.RoommatePortal.utils.getLocalDateTimeString(endDate),
+                        isAllDay: event.startDate.isDate,
+                        privacy: importAsPrivate ? 'private' : 'shared',
+                        createdBy: currentUser.uid,
+                        createdByName: currentUser.displayName || currentUser.email,
+                        householdId: currentHousehold.id,
+                        createdAt: window.RoommatePortal.utils.getLocalDateTimeString(new Date()),
+                        importedFrom: 'ical'
+                    };
+
+                    console.log('Prepared event data:', eventData);
+
+                    // Encrypt sensitive data
+                    const encryptedData = await window.RoommatePortal.encryption.encryptSensitiveData(
+                        eventData,
+                        ['title', 'description', 'location']
+                    );
+
+                    importedEvents.push(encryptedData);
+                    console.log('Event added to import list');
+                } catch (error) {
+                    console.error(`Error processing event ${i + 1}:`, error);
+                    errors.push(`Error processing event ${i + 1}: ${error.message}`);
+                }
+            }
+
+            console.log('Import summary:', {
+                totalEvents: vevents.length,
+                importedEvents: importedEvents.length,
+                skippedPastEvents: skippedPastEvents.length,
+                errors: errors.length
+            });
+
+            if (importedEvents.length === 0) {
+                if (vevents.length === 0) {
+                    throw new Error('No events found in the iCal file. Please check that the file contains valid calendar events.');
+                } else if (skippedPastEvents.length > 0 && !includePastEvents) {
+                    throw new Error(`Found ${vevents.length} events but ${skippedPastEvents.length} were past events and were skipped. Check "Include past events" to import them.`);
+                } else {
+                    throw new Error(`Found ${vevents.length} events but none were valid for import.`);
+                }
+            }
+
+            // Save events in batches
+            const batchSize = 500;
+            const eventsCollection = firebase.firestore()
+                .collection('households')
+                .doc(currentHousehold.id)
+                .collection('events');
+
+            console.log('Saving', importedEvents.length, 'events to Firestore...');
+
+            for (let i = 0; i < importedEvents.length; i += batchSize) {
+                const batch = firebase.firestore().batch();
+                const batchEvents = importedEvents.slice(i, i + batchSize);
+
+                batchEvents.forEach(event => {
+                    batch.set(eventsCollection.doc(event.id), event);
+                });
+
+                await batch.commit();
+                console.log(`Saved batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(importedEvents.length / batchSize)}`);
+            }
+
+            if (errors.length > 0) {
+                console.warn('Some events could not be imported:', errors);
+            }
+
+            if (skippedPastEvents.length > 0 && !includePastEvents) {
+                console.log('Skipped past events:', skippedPastEvents);
+            }
+
+            return importedEvents.length;
+        } catch (error) {
+            console.error('Error in processICalData:', error);
+            throw new Error('Error processing calendar data: ' + error.message);
         }
     },
 
