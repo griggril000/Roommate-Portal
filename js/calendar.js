@@ -173,7 +173,13 @@ const calendarModule = {
                 const icon = document.createElement('i');
                 icon.className = 'fas fa-lock';
                 icon.style.marginRight = '4px';
-                info.el.querySelector('.fc-event-title').prepend(icon);
+                const titleEl = info.el.querySelector('.fc-event-title');
+                if (titleEl) {
+                    titleEl.prepend(icon);
+                } else {
+                    // Optionally log a warning for debugging
+                    // console.warn('fc-event-title not found for event', eventData);
+                }
             }
 
             // Add all-day icon
@@ -181,7 +187,13 @@ const calendarModule = {
                 const icon = document.createElement('i');
                 icon.className = 'fas fa-calendar';
                 icon.style.marginRight = '4px';
-                info.el.querySelector('.fc-event-title').prepend(icon);
+                const titleEl = info.el.querySelector('.fc-event-title');
+                if (titleEl) {
+                    titleEl.prepend(icon);
+                } else {
+                    // Optionally log a warning for debugging
+                    // console.warn('fc-event-title not found for event', eventData);
+                }
             }
         }
     },
